@@ -1,0 +1,83 @@
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean, Text
+from sqlalchemy.orm import relationship
+from datetime import datetime
+from database import Base
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, nullable=False, index=True)
+    phone = Column(String, nullable=True)
+    password_hash = Column(String, nullable=False)
+    role = Column(String, default="cashier")
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    sales = relationship("Sale", back_populates="cashier")
+
+class Category(Base):
+    __tablename__ = "categories"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    products = relationship("Product", back_populates="category")
+
+class Product(Base):
+    __tablename__ = "products"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, index=True)
+    barcode = Column(String, unique=True, nullable=True)
+    unit = Column(String, nullable=True)
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
+    price = Column(Float, nullable=False)
+    cost = Column(Float, nullable=True)
+    stock = Column(Integer, default=0)
+    low_stock_alert = Column(Integer, default=5)
+    tax_rate = Column(Float, default=0)  # NEW: Tax rate percentage
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    category = relationship("Category", back_populates="products")
+    sale_items = relationship("SaleItem", back_populates="product")
+
+class Customer(Base):
+    __tablename__ = "customers"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    phone = Column(String, unique=True, nullable=True)
+    email = Column(String, unique=True, nullable=True)
+    credit_limit = Column(Float, default=0)
+    credit_balance = Column(Float, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    sales = relationship("Sale", back_populates="customer")
+
+class Sale(Base):
+    __tablename__ = "sales"
+    id = Column(Integer, primary_key=True, index=True)
+    receipt_no = Column(String, unique=True, nullable=False)
+    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
+    cashier_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    subtotal = Column(Float, default=0)
+    tax_amount = Column(Float, default=0)
+    discount = Column(Float, default=0)
+    total_amount = Column(Float, nullable=False)
+    payment_method = Column(String, nullable=False)
+    payment_ref = Column(String, nullable=True)
+    status = Column(String, default="completed")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    customer = relationship("Customer", back_populates="sales")
+    cashier = relationship("User", back_populates="sales")
+    items = relationship("SaleItem", back_populates="sale")
+
+class SaleItem(Base):
+    __tablename__ = "sale_items"
+    id = Column(Integer, primary_key=True, index=True)
+    sale_id = Column(Integer, ForeignKey("sales.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    unit_price = Column(Float, nullable=False)
+    tax_rate = Column(Float, default=0)
+    tax_amount = Column(Float, default=0)
+    total_price = Column(Float, nullable=False)
+    sale = relationship("Sale", back_populates="items")
+    product = relationship("Product", back_populates="sale_items")

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Safari POS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        /* Prevent browser autofill styling */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus {
+            -webkit-box-shadow: 0 0 0 1000px white inset !important;
+            box-shadow: 0 0 0 1000px white inset !important;
+            -webkit-text-fill-color: #2c3e50 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="login-logo">
+                <h1>SAFARI POS</h1>
+                <p>Safari Softwares - The Force Behind the Future</p>
+            </div>
+            
+            <!-- autocomplete="off" on form and inputs -->
+            <form id="loginForm" autocomplete="off" novalidate>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="email" name="email" required placeholder="Enter your email" 
+                           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                           value="">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <div style="position: relative;">
+                        <input type="password" id="password" name="password" required placeholder="Enter your password" 
+                               autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false"
+                               value="" style="padding-right: 60px;">
+                        <button type="button" onclick="togglePassword('password', this)" 
+                                style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 14px;">
+                            Show
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/static/js/auth.js"></script>
+    <script>
+        // Force clear everything on page load
+        (function() {
+            // Clear all storage
+            sessionStorage.clear();
+            localStorage.clear();
+            
+            // Clear all cookies
+            document.cookie.split(";").forEach(function(c) {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            
+            // Clear form fields
+            document.getElementById('email').value = '';
+            document.getElementById('password').value = '';
+            
+            // Disable browser autofill
+            document.getElementById('email').setAttribute('autocomplete', 'off');
+            document.getElementById('password').setAttribute('autocomplete', 'new-password');
+        })();
+        
+        function togglePassword(inputId, button) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                button.textContent = 'Hide';
+            } else {
+                input.type = 'password';
+                button.textContent = 'Show';
+            }
+        }
+        
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            
+            try {
+                await authManager.login(email, password);
+                
+                // Clear form before redirect
+                emailInput.value = '';
+                passwordInput.value = '';
+                
+                // Clear browser autofill data
+                if (window.passwordManager) {
+                    window.passwordManager.clear();
+                }
+                
+                window.location.href = '/';
+            } catch (error) {
+                alert('Login failed: ' + error.message);
+                // Clear password on failure
+                passwordInput.value = '';
+                emailInput.value = '';
+                emailInput.focus();
+            }
+        });
+        
+        // Clear fields if user navigates back to this page
+        window.addEventListener('pageshow', function() {
+            document.getElementById('email').value = '';
+            document.getElementById('password').value = '';
+        });
+    </script>
+</body>
+</html>

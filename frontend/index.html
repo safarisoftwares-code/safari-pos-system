@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safari POS System</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-logo">
+                <h2>SAFARI POS</h2>
+                <p>The Force Behind the Future</p>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a class="active" onclick="showView('dashboard')">Dashboard</a></li>
+                <li><a onclick="showView('pos')">New Sale</a></li>
+                <li><a onclick="showView('products')">Products</a></li>
+                <li><a onclick="showView('categories')">Categories</a></li>
+                <li><a onclick="showView('users')">Users</a></li>
+                <li><a onclick="showView('reports')">Reports</a></li>
+                <li><a onclick="showView('backup')">Backup</a></li>
+                <li><a onclick="showView('settings')">Settings</a></li>
+                <li><a id="logoutBtn" style="color: #ff6b6b;">Logout</a></li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="top-bar">
+                <div>
+                    <button onclick="document.getElementById('sidebar').classList.toggle('active')" style="background: none; border: none; font-size: 24px; cursor: pointer;">Menu</button>
+                    <span style="margin-left: 10px; font-weight: bold;">Safari POS</span>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <span id="userName" style="font-weight: bold;"></span>
+                    <span id="userRole" style="background: #8b4513; color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px;"></span>
+                </div>
+            </div>
+
+            <div id="dashboard" class="view">
+                <h2 style="margin-bottom: 20px;">Dashboard</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                    <div class="card">
+                        <h3 class="card-title">Today's Sales</h3>
+                        <p style="font-size: 32px; font-weight: bold;" id="todaySales">0</p>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">Today's Revenue</h3>
+                        <p style="font-size: 32px; font-weight: bold; color: #2e7d32;" id="todayRevenue">KSh 0.00</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">Today's Transactions</h3>
+                    <div class="data-table">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th>Receipt No</th>
+                                    <th>Time</th>
+                                    <th>Cashier</th>
+                                    <th>Payment</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="todaySalesTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pos" class="view" style="display:none;">
+                <div class="pos-container">
+                    <div class="product-grid-container">
+                        <select id="posCategoryFilter" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #ecf0f1; border-radius: 8px;">
+                            <option value="all">All Categories</option>
+                        </select>
+                        <input type="text" id="searchProduct" placeholder="Search products..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 2px solid #ecf0f1; border-radius: 8px;">
+                        <div class="product-grid" id="productGrid"></div>
+                    </div>
+                    <div class="cart-container">
+                        <h3 style="margin-bottom: 15px; color: #8b4513;">Current Sale</h3>
+                        <div class="cart-items" id="cartItems">
+                            <p style="color: #95a5a6; text-align: center; margin-top: 50px;">Cart is empty</p>
+                        </div>
+                        <div>
+                            <div style="margin-bottom: 15px;">
+                                <label>Discount (%)</label>
+                                <input type="number" id="discountInput" value="0" style="width: 100%; padding: 10px; border: 2px solid #ecf0f1; border-radius: 8px;">
+                            </div>
+                            <div style="padding: 20px 0; border-top: 2px solid #ecf0f1;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                    <span>Subtotal:</span>
+                                    <span id="subtotal">KSh 0.00</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                    <span>Tax:</span>
+                                    <span id="tax">KSh 0.00</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                    <span>Discount:</span>
+                                    <span id="discount">KSh 0.00</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: bold; color: #8b4513;">
+                                    <span>TOTAL:</span>
+                                    <span id="total">KSh 0.00</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" onclick="checkout()" style="width: 100%; padding: 15px; font-size: 18px;">Checkout</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="products" class="view" style="display:none;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <h2>Products</h2>
+                    <button class="btn btn-primary" onclick="openProductModal()" style="width: auto; padding: 10px 20px;">Add Product</button>
+                </div>
+                <div class="data-table">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Unit</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Tax</th>
+                                <th>Stock</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="categories" class="view" style="display:none;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <h2>Categories</h2>
+                    <button class="btn btn-primary" onclick="openCategoryModal()" style="width: auto; padding: 10px 20px;">Add Category</button>
+                </div>
+                <div class="data-table">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody id="categoriesTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="users" class="view" style="display:none;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <h2>Users</h2>
+                    <button class="btn btn-primary" onclick="openUserModal()" style="width: auto; padding: 10px 20px;">Add User</button>
+                </div>
+                <div class="data-table">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="reports" class="view" style="display:none;">
+                <h2 style="margin-bottom: 20px;">Reports</h2>
+                <div class="card">
+                    <h3 class="card-title">All Sales</h3>
+                    <div class="data-table">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th>Receipt No</th>
+                                    <th>Date/Time</th>
+                                    <th>Cashier</th>
+                                    <th>Subtotal</th>
+                                    <th>Tax</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allSalesTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card" style="margin-top: 20px;">
+                    <h3 class="card-title">Low Stock Products</h3>
+                    <div id="lowStockList"></div>
+                </div>
+            </div>
+
+            <div id="backup" class="view" style="display:none;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <h2>Data Backup</h2>
+                    <button class="btn btn-primary" onclick="createBackup()" style="width: auto; padding: 10px 20px;">Create Backup</button>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">Existing Backups</h3>
+                    <div class="data-table">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th>Filename</th>
+                                    <th>Size</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="backupsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="settings" class="view" style="display:none;">
+                <h2 style="margin-bottom: 20px;">Settings</h2>
+                
+                <div class="card">
+                    <h3 class="card-title" onclick="toggleSection('businessSection')" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                        Business Information
+                        <span id="businessSectionIcon">+</span>
+                    </h3>
+                    <div id="businessSection" style="display: none;">
+                    <div class="form-group">
+                        <label>Business Name</label>
+                        <input type="text" id="businessName" placeholder="e.g., Brightline Electricals (K) Ltd" style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px;">
+                    </div>
+                    <div class="form-group">
+                        <label>P.O. Box</label>
+                        <input type="text" id="businessPoBox" placeholder="e.g., P.O. Box 12345-00100" style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px;">
+                    </div>
+                    <div class="form-group">
+                        <label>Location</label>
+                        <input type="text" id="businessLocation" placeholder="e.g., Nairobi, Kenya" style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px;">
+                    </div>
+                    <div class="form-group">
+                        <label>Tax PIN</label>
+                        <input type="text" id="businessTaxPin" placeholder="e.g., P051234567X" style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px;">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="text" id="businessPhone" placeholder="e.g., +254700000000" style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px;">
+                    </div>
+                    <div class="form-group">
+                        <label>Receipt Footer Message</label>
+                        <input type="text" id="receiptFooter" placeholder="e.g., Thank you! Karibu Tena!" style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px;">
+                    </div>
+                    <button class="btn btn-primary" onclick="updateBusinessInfo()" style="width: auto; padding: 10px 20px;">Save Business Info</button>
+                </div>
+                
+                </div>
+                </div>
+                
+                <div class="card">
+                    <h3 class="card-title">Tax Rate</h3>
+                    <div class="form-group">
+                        <label>Default Tax Rate (%)</label>
+                        <input type="number" id="defaultTaxRate" value="16" min="0" max="100" style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px;">
+                    </div>
+                    <button class="btn btn-primary" onclick="updateTaxRate()" style="width: auto; padding: 10px 20px;">Save Tax Rate</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color: #8b4513; margin-bottom: 20px;">Add Product</h3>
+            <form id="productForm">
+                <div class="form-group">
+                    <label>Product Name</label>
+                    <input type="text" id="productName" required>
+                </div>
+                <div class="form-group">
+                    <label>Unit/Size</label>
+                    <input type="text" id="productUnit" placeholder="e.g., 2kg, 1kg, 500g">
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="productCategory"></select>
+                </div>
+                <div class="form-group">
+                    <label>Price (KSh)</label>
+                    <input type="number" id="productPrice" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Tax Rate (%)</label>
+                    <input type="number" id="productTaxRate" value="16" min="0" max="100">
+                </div>
+                <div class="form-group">
+                    <label>Stock</label>
+                    <input type="number" id="productStock" value="0" required>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Add</button>
+                    <button type="button" class="btn btn-danger" onclick="closeModal('productModal')" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="categoryModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color: #8b4513; margin-bottom: 20px;">Add Category</h3>
+            <form id="categoryForm">
+                <div class="form-group">
+                    <label>Category Name</label>
+                    <input type="text" id="categoryName" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" id="categoryDescription">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Add</button>
+                    <button type="button" class="btn btn-danger" onclick="closeModal('categoryModal')" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color: #8b4513; margin-bottom: 20px;">Add User</h3>
+            <form id="userForm">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="userNameInput" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="userEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="userPassword" required>
+                </div>
+                <div class="form-group">
+                    <label>Role</label>
+                    <select id="userRoleSelect">
+                        <option value="cashier">Cashier</option>
+                        <option value="manager">Manager</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Add</button>
+                    <button type="button" class="btn btn-danger" onclick="closeModal('userModal')" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
