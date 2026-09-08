@@ -347,11 +347,10 @@ async function checkout() {
 }
 
 function printReceipt(sale) {
-    // Build receipt HTML using ONLY businessSettings (no hardcoded fallbacks)
+    // Build receipt HTML using ONLY businessSettings
     let itemsHtml = '';
     sale.items.forEach(item => {
         const lineTotal = item.quantity * item.unit_price;
-        const lineTax = lineTotal * (item.tax_rate || 16) / 100;
         itemsHtml += '<tr>' +
             '<td>' + item.name + (item.unit ? ' (' + item.unit + ')' : '') + '</td>' +
             '<td style="text-align:center;">' + item.quantity + '</td>' +
@@ -359,7 +358,7 @@ function printReceipt(sale) {
             '</tr>';
     });
     
-    // Build header from businessSettings ONLY
+    // Build header from businessSettings
     let headerHtml = '';
     if (businessSettings) {
         headerHtml += '<h2>' + (businessSettings.business_name || '') + '</h2>';
@@ -377,7 +376,7 @@ function printReceipt(sale) {
     // Build tax PIN line
     let taxPinHtml = '';
     if (businessSettings && businessSettings.business_tax_pin) {
-        taxPinHtml = '<p style="font-size:11px;">Tax PIN: ' + businessSettings.business_tax_pin + '</p><hr>';
+        taxPinHtml = '<p style="font-size:11px;">Tax PIN: ' + businessSettings.business_tax_pin + '</p>';
     }
     
     // Build footer
@@ -399,7 +398,8 @@ function printReceipt(sale) {
         'td { padding: 3px 0; }' +
         '.total-row { font-weight: bold; font-size: 14px; }' +
         '.footer { text-align: center; margin-top: 15px; font-size: 11px; }' +
-        '@media print { body { margin: 0; } }' +
+        '.close-btn { display: block; margin: 20px auto; padding: 10px 20px; background: #8b4513; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }' +
+        '@media print { body { margin: 0; } .close-btn { display: none; } }' +
         '</style></head><body>' +
         '<div class="header">' + headerHtml + '</div>' +
         '<hr>' +
@@ -407,6 +407,7 @@ function printReceipt(sale) {
         '<p style="font-size:12px;">Date: ' + new Date(sale.created_at).toLocaleString() + '</p>' +
         '<hr>' +
         taxPinHtml +
+        '<hr>' +
         '<table>' +
         '<thead><tr><th>Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Amount</th></tr></thead>' +
         '<tbody>' + itemsHtml + '</tbody>' +
@@ -421,6 +422,7 @@ function printReceipt(sale) {
         '<hr>' +
         '<p style="font-size:12px;">Payment: ' + sale.payment_method.toUpperCase() + '</p>' +
         '<div class="footer">' + footerHtml + '</div>' +
+        '<button class="close-btn" onclick="window.close()">Close Receipt</button>' +
         '</body></html>';
     
     // Open print window
@@ -428,10 +430,15 @@ function printReceipt(sale) {
     printWindow.document.write(receiptHtml);
     printWindow.document.close();
     
-    // Wait for content to load then print
+    // Auto print after 1 second
     setTimeout(() => {
-        printWindow.print();
-    }, 500);
+        try { printWindow.print(); } catch(e) { console.log(e); }
+    }, 1000);
+    
+    // Auto close after 15 seconds
+    setTimeout(() => {
+        try { printWindow.close(); } catch(e) { console.log(e); }
+    }, 15000);
 }
 
 // ============ DASHBOARD ============
@@ -771,7 +778,8 @@ async function reprintLastReceipt() {
         const printWindow = window.open('', 'Reprint', 'width=400,height=600');
         printWindow.document.write(receiptHtml);
         printWindow.document.close();
-        setTimeout(() => { printWindow.print(); }, 500);
+        setTimeout(() => { try { printWindow.print(); } catch(e) {} }, 1000);
+        setTimeout(() => { try { printWindow.close(); } catch(e) {} }, 15000);
         
     } catch (e) { alert(e.message); }
 }
