@@ -208,10 +208,10 @@
         <div class="modal-content">
             <h3>Add User</h3>
             <form id="userForm">
-                <div class="form-group"><label>Name</label><input type="text" id="userNameInput" required></div>
-                <div class="form-group"><label>Email</label><input type="email" id="userEmail" required></div>
-                <div class="form-group"><label>Password</label><input type="password" id="userPassword" required></div>
-                <div class="form-group"><label>Role</label><select id="userRoleSelect"><option value="cashier">Cashier</option><option value="manager">Manager</option></select></div>
+                <div class="form-group"><label>Name</label><input type="text" id="userNameInput" required placeholder="" autocomplete="off"></div>
+                <div class="form-group"><label>Email</label><input type="email" id="userEmail" required placeholder="" autocomplete="off"></div>
+                <div class="form-group"><label>Password</label><div style="position:relative"><input type="password" id="userPassword" required style="padding-right:60px;width:100%;box-sizing:border-box"><button type="button" onclick="togglePassword('userPassword',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px">Show</button></div></div>
+                <div class="form-group"><label>Role</label><select id="userRoleSelect"><option value="">Select Role...</option><option value="cashier">Cashier</option><option value="manager">Manager</option></select></div>
                 <div style="display:flex;gap:10px"><button type="submit" class="btn btn-primary" style="flex:1">Add</button><button type="button" class="btn btn-danger" onclick="closeModal('userModal')" style="flex:1">Cancel</button></div>
             </form>
         </div>
