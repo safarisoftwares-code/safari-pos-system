@@ -141,3 +141,30 @@ async def get_all_sales(current_user=Depends(get_current_user), db: Session = De
         }
         for s in sales
     ]
+
+
+@router.get("/daily-close")
+async def daily_close(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """End of day summary by payment method"""
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    if current_user.role in ["admin", "manager"]:
+        sales = db.query(Sale).filter(Sale.created_at >= today).all()
+    else:
+        sales = db.query(Sale).filter(Sale.created_at >= today, Sale.cashier_id == current_user.id).all()
+    
+    cash_total = sum(s.total_amount for s in sales if s.payment_method == 'cash')
+    mpesa_total = sum(s.total_amount for s in sales if s.payment_method == 'mpesa')
+    card_total = sum(s.total_amount for s in sales if s.payment_method == 'card')
+    credit_total = sum(s.total_amount for s in sales if s.payment_method == 'credit')
+    total = sum(s.total_amount for s in sales)
+    
+    return {
+        "date": today.strftime("%Y-%m-%d"),
+        "total_transactions": len(sales),
+        "cash_total": cash_total,
+        "mpesa_total": mpesa_total,
+        "card_total": card_total,
+        "credit_total": credit_total,
+        "grand_total": total
+    }

@@ -49,3 +49,31 @@ async def delete_product(product_id: int, current_user=Depends(get_current_user)
     product.is_active = False
     db.commit()
     return {"message": "Product deleted"}
+
+
+@router.put("/{product_id}/stock")
+async def adjust_stock(product_id: int, adjustment: int, reason: str = "manual", current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Adjust stock manually (positive = add, negative = remove)"""
+    if current_user.role not in ["admin", "manager"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    new_stock = product.stock + adjustment
+    if new_stock < 0:
+        raise HTTPException(status_code=400, detail="Stock cannot be negative")
+    
+    product.stock = new_stock
+    db.commit()
+    db.refresh(product)
+    
+    return {
+        "message": f"Stock adjusted",
+        "product": product.name,
+        "old_stock": product.stock - adjustment,
+        "adjustment": adjustment,
+        "new_stock": product.stock,
+        "reason": reason
+    }

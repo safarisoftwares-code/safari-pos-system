@@ -75,6 +75,7 @@
                         <select id="posCategoryFilter" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #ecf0f1; border-radius: 8px;">
                             <option value="all">All Categories</option>
                         </select>
+                        <input type="text" id="barcodeInput" placeholder="Scan barcode here..." autofocus style="width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #d2691e; border-radius: 8px; font-size: 18px;">
                         <input type="text" id="searchProduct" placeholder="Search products..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 2px solid #ecf0f1; border-radius: 8px;">
                         <div class="product-grid" id="productGrid"></div>
                     </div>
@@ -177,7 +178,46 @@
             </div>
 
             <div id="reports" class="view" style="display:none;">
-                <h2 style="margin-bottom: 20px;">Reports</h2>
+                <div class="card" style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 class="card-title">Daily Close Report</h3>
+                        <button class="btn btn-secondary" onclick="reprintLastReceipt()" style="width: auto; padding: 10px 15px;">Reprint Last Receipt</button>
+                    </div>
+                    <p>Date: <span id="dailyCloseDate"></span> | Transactions: <span id="dailyCloseTransactions">0</span></p>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                        <thead>
+                            <tr><th>Payment Method</th><th style="text-align:right;">Amount</th></tr>
+                        </thead>
+                        <tbody id="dailyCloseTableBody"></tbody>
+                    </table>
+                </div>
+                
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3 class="card-title">Profit Report</h3>
+                    <div class="data-table">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Selling Price</th>
+                                    <th>Tax</th>
+                                    <th>Net Selling</th>
+                                    <th>Cost</th>
+                                    <th>Gross Profit</th>
+                                    <th>Margin</th>
+                                </tr>
+                            </thead>
+                            <tbody id="profitTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <h2>Reports</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-secondary" onclick="exportSalesCSV()" style="width: auto; padding: 10px 15px;">Export Sales</button>
+                        <button class="btn btn-secondary" onclick="exportProductsCSV()" style="width: auto; padding: 10px 15px;">Export Products</button>
+                    </div>
+                </div>
                 <div class="card">
                     <h3 class="card-title">All Sales</h3>
                     <div class="data-table">
@@ -265,6 +305,22 @@
                 </div>
                 
                 <div class="card">
+                    <h3 class="card-title">Barcode Scanner Setup</h3>
+                    <div class="note" style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <strong>How Scanner Works:</strong><br>
+                        1. Connect USB barcode scanner to computer<br>
+                        2. No installation needed - plug and play<br>
+                        3. Scanner acts as a keyboard<br>
+                        4. Cashiers scan product barcodes in New Sale
+                    </div>
+                    <div class="form-group">
+                        <label>Test Scanner Here</label>
+                        <input type="text" id="scannerTest" placeholder="Scan any barcode to test..." style="width: 100%; padding: 12px; border: 2px solid #d2691e; border-radius: 8px; font-size: 16px;">
+                    </div>
+                    <div id="scannerResult" style="margin-top: 10px;"></div>
+                </div>
+
+                <div class="card">
                     <h3 class="card-title">Tax Rate</h3>
                     <div class="form-group">
                         <label>Default Tax Rate (%)</label>
@@ -285,6 +341,10 @@
                     <input type="text" id="productName" required>
                 </div>
                 <div class="form-group">
+                    <label>Barcode (Scan with scanner)</label>
+                    <input type="text" id="productBarcode" placeholder="Scan barcode here">
+                </div>
+                <div class="form-group">
                     <label>Unit/Size</label>
                     <input type="text" id="productUnit" placeholder="e.g., 2kg, 1kg, 500g">
                 </div>
@@ -295,6 +355,10 @@
                 <div class="form-group">
                     <label>Price (KSh)</label>
                     <input type="number" id="productPrice" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Cost Price (KSh) - for profit calculation</label>
+                    <input type="number" id="productCost" step="0.01" placeholder="Optional">
                 </div>
                 <div class="form-group">
                     <label>Tax Rate (%)</label>
@@ -358,6 +422,30 @@
                 <div style="display: flex; gap: 10px;">
                     <button type="submit" class="btn btn-primary" style="flex: 1;">Add</button>
                     <button type="button" class="btn btn-danger" onclick="closeModal('userModal')" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Stock Adjustment Modal -->
+    <div id="stockModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color: #8b4513; margin-bottom: 20px;">Adjust Stock</h3>
+            <p>Product: <strong id="stockProductName"></strong></p>
+            <p>Current Stock: <strong id="stockCurrent"></strong></p>
+            <form id="stockForm">
+                <input type="hidden" id="stockProductId">
+                <div class="form-group">
+                    <label>Adjustment (+ add / - remove)</label>
+                    <input type="number" id="stockAdjustment" required placeholder="e.g., -5 for damage, +10 for restock">
+                </div>
+                <div class="form-group">
+                    <label>Reason</label>
+                    <input type="text" id="stockReason" placeholder="e.g., damage, theft, counting, restock">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Adjust</button>
+                    <button type="button" class="btn btn-danger" onclick="closeModal('stockModal')" style="flex: 1;">Cancel</button>
                 </div>
             </form>
         </div>
