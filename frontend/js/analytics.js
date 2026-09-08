@@ -39,3 +39,33 @@ async function loadAnalytics() {
         
     } catch (e) { console.error('Analytics error:', e); }
 }
+
+
+async function loadExpiryReport() {
+    try {
+        const data = await apiCall('/analytics/expiry');
+        
+        // Expired items
+        let expiredHtml = '';
+        if (data.expired && data.expired.length > 0) {
+            data.expired.forEach(item => {
+                expiredHtml += '<div style="padding:10px;background:#f8d7da;margin-bottom:5px;border-radius:5px;border-left:4px solid #d32f2f"><strong>' + item.name + '</strong><br>EXPIRED ' + Math.abs(item.days) + ' days ago<br>Stock: ' + item.stock + ' units</div>';
+            });
+        } else {
+            expiredHtml = '<p style="color:#2e7d32">No expired items!</p>';
+        }
+        document.getElementById('expiredList').innerHTML = expiredHtml;
+        
+        // Expiring soon
+        let expiringHtml = '';
+        if (data.expiring_soon && data.expiring_soon.length > 0) {
+            data.expiring_soon.forEach(item => {
+                expiringHtml += '<div style="padding:10px;background:#fff3cd;margin-bottom:5px;border-radius:5px;border-left:4px solid #ffc107"><strong>' + item.name + '</strong><br>Expires in: ' + item.days + ' days<br>Stock: ' + item.stock + ' units</div>';
+            });
+        } else {
+            expiringHtml = '<p style="color:#2e7d32">No expiring items!</p>';
+        }
+        document.getElementById('expiringList').innerHTML = expiringHtml;
+        
+    } catch (e) { console.error('Expiry error:', e); }
+}

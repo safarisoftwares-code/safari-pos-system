@@ -35,6 +35,7 @@ class Product(Base):
     stock = Column(Integer, default=0)
     low_stock_alert = Column(Integer, default=5)
     tax_rate = Column(Float, default=0)  # NEW: Tax rate percentage
+    expiry_date = Column(String, nullable=True)  # NEW: Expiry date (YYYY-MM-DD)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     category = relationship("Category", back_populates="products")

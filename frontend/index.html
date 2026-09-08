@@ -115,6 +115,13 @@
             <div id="analytics" class="view" style="display:none;">
                 <h2 style="margin-bottom: 20px;">Business Analytics</h2>
                 
+                <div class="card"><h3 class="card-title">📅 Expiry Tracking</h3>
+                    <h4 style="color:#d32f2f">❌ Expired Items</h4>
+                    <div id="expiredList"></div>
+                    <h4 style="color:#ffc107;margin-top:10px">⚠️ Expiring Soon (7 days)</h4>
+                    <div id="expiringList"></div>
+                </div>
+                
                 <div class="card"><h3 class="card-title">🏆 Top Sellers (30 Days)</h3><div class="data-table"><table style="width:100%"><thead><tr><th>#</th><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr></thead><tbody id="topSellersBody"></tbody></table></div></div>
                 
                 <div class="card"><h3 class="card-title">📉 Worst Sellers (30 Days)</h3><div class="data-table"><table style="width:100%"><thead><tr><th>#</th><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr></thead><tbody id="worstSellersBody"></tbody></table></div></div>
@@ -188,6 +195,7 @@
                 <div class="form-group"><label>Cost (KSh)</label><input type="number" id="productCost" step="0.01"></div>
                 <div class="form-group"><label>Tax Status</label><select id="productTaxRate"><option value="16">A - Taxable</option><option value="0">B - Non-Taxable</option></select></div>
                 <div class="form-group"><label>Stock</label><input type="number" id="productStock" value="0" required></div>
+                <div class="form-group"><label>Expiry Date</label><input type="date" id="productExpiry"></div>
                 <div style="display:flex;gap:10px"><button type="submit" class="btn btn-primary" style="flex:1">Add</button><button type="button" class="btn btn-danger" onclick="closeModal('productModal')" style="flex:1">Cancel</button></div>
             </form>
         </div>
@@ -203,6 +211,7 @@
                 <div class="form-group"><label>Price (KSh)</label><input type="number" id="editProductPrice" step="0.01" required></div>
                 <div class="form-group"><label>Tax Status</label><select id="editProductTaxRate"><option value="16">A - Taxable</option><option value="0">B - Non-Taxable</option></select></div>
                 <div class="form-group"><label>Stock</label><input type="number" id="editProductStock" required></div>
+                <div class="form-group"><label>Expiry Date</label><input type="date" id="editProductExpiry"></div>
                 <div style="display:flex;gap:10px"><button type="submit" class="btn btn-primary" style="flex:1">Save</button><button type="button" class="btn btn-danger" onclick="closeModal('editProductModal')" style="flex:1">Cancel</button></div>
             </form>
         </div>

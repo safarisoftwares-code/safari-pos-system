@@ -48,6 +48,7 @@ class ProductCreate(BaseModel):
     stock: int = 0
     low_stock_alert: int = 5
     tax_rate: float = 0
+    expiry_date: Optional[str] = None
 
 class ProductResponse(BaseModel):
     id: int
@@ -57,6 +58,7 @@ class ProductResponse(BaseModel):
     category_id: Optional[int]
     price: float
     tax_rate: Optional[float] = 0
+    expiry_date: Optional[str] = None
     stock: int
     low_stock_alert: int
     class Config:
