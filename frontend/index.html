@@ -20,6 +20,7 @@
                 <li><a onclick="showView('categories')">Categories</a></li>
                 <li><a onclick="showView('users')">Users</a></li>
                 <li><a onclick="showView('reports')">Reports</a></li>
+                <li><a onclick="showView('analytics')">Analytics</a></li>
                 <li><a onclick="showView('receipts')">Receipts</a></li>
                 <li><a onclick="showView('purchaseOrders')">Purchase Orders</a></li>
                 <li><a onclick="showView('backup')">Backup</a></li>
@@ -109,6 +110,20 @@
                 <div class="card"><h3 class="card-title">Profit Report</h3><div class="data-table"><table style="width:100%"><thead><tr><th>Product</th><th>Selling</th><th>Tax</th><th>Net</th><th>Cost</th><th>Profit</th><th>Margin</th></tr></thead><tbody id="profitTableBody"></tbody></table></div></div>
                 <div class="card"><h3 class="card-title">All Sales</h3><div class="data-table"><table style="width:100%"><thead><tr><th>Receipt</th><th>Date</th><th>Cashier</th><th>Total</th></tr></thead><tbody id="allSalesTableBody"></tbody></table></div></div>
                 <div class="card"><h3 class="card-title">Low Stock</h3><div id="lowStockList"></div></div>
+            </div>
+
+            <div id="analytics" class="view" style="display:none;">
+                <h2 style="margin-bottom: 20px;">Business Analytics</h2>
+                
+                <div class="card"><h3 class="card-title">🏆 Top Sellers (30 Days)</h3><div class="data-table"><table style="width:100%"><thead><tr><th>#</th><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr></thead><tbody id="topSellersBody"></tbody></table></div></div>
+                
+                <div class="card"><h3 class="card-title">📉 Worst Sellers (30 Days)</h3><div class="data-table"><table style="width:100%"><thead><tr><th>#</th><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr></thead><tbody id="worstSellersBody"></tbody></table></div></div>
+                
+                <div class="card"><h3 class="card-title">💰 Profit Champions</h3><div class="data-table"><table style="width:100%"><thead><tr><th>#</th><th>Product</th><th>Profit/Unit</th><th>Margin</th></tr></thead><tbody id="profitChampionsBody"></tbody></table></div></div>
+                
+                <div class="card"><h3 class="card-title">📛 Loss Makers</h3><div class="data-table"><table style="width:100%"><thead><tr><th>#</th><th>Product</th><th>Loss/Unit</th><th>Margin</th></tr></thead><tbody id="lossMakersBody"></tbody></table></div></div>
+                
+                <div class="card"><h3 class="card-title">🐌 Slow Movers</h3><div class="data-table"><table style="width:100%"><thead><tr><th>#</th><th>Product</th><th>Stock</th><th>Sold (30d)</th></tr></thead><tbody id="slowMoversBody"></tbody></table></div></div>
             </div>
 
             <div id="receipts" class="view" style="display:none;">
@@ -247,5 +262,6 @@
     <script src="/static/js/auth.js"></script>
     <script src="/static/js/app.js"></script>
     <script src="/static/js/main.js"></script>
+    <script src="/static/js/analytics.js"></script>
 </body>
 </html>

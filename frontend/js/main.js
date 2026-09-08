@@ -7,7 +7,7 @@ let businessSettings = null;
 function showView(viewName) {
     const user = authManager.getUser();
     if (user && user.role === 'cashier') {
-        const allowed = ['dashboard', 'pos', 'receipts'];
+        const allowed = ['dashboard', 'pos', 'receipts', 'reports'];
         if (!allowed.includes(viewName)) { alert('Access denied.'); return; }
     }
     document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
@@ -19,6 +19,7 @@ function showView(viewName) {
     if (viewName === 'categories') loadCategories();
     if (viewName === 'users') loadUsers();
     if (viewName === 'reports') { loadAllSales(); loadLowStock(); loadDailyClose(); loadProfitReport(); }
+    if (viewName === 'analytics') { loadAnalytics(); }
     if (viewName === 'pos') loadProductsForPOS();
     if (viewName === 'backup') loadBackups();
     if (viewName === 'settings') { loadSettings(); loadMpesaSettings(); }
@@ -389,7 +390,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (user && user.role === 'cashier') {
         document.querySelectorAll('.sidebar-menu a').forEach(a => {
             const t = a.textContent.trim();
-            if (['Products','Categories','Users','Reports','Purchase Orders','Backup','Settings'].includes(t)) {
+            if (['Products','Categories','Users','Reports','Analytics','Purchase Orders','Backup','Settings'].includes(t)) {
                 a.style.display = 'none';
             }
         });
