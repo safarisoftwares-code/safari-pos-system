@@ -17,6 +17,8 @@ function showView(viewName) {
     if (viewName === 'reports') { loadAllSales(); loadLowStock(); loadDailyClose(); loadProfitReport(); }
     if (viewName === 'pos') loadProductsForPOS();
     if (viewName === 'backup') loadBackups();
+    if (viewName === 'receipts') loadReceiptHistory();
+    if (viewName === 'purchaseOrders') loadPurchaseOrders();
     if (viewName === 'settings') loadSettings();
     if (viewName === 'dashboard') loadDashboard();
 }
@@ -800,6 +802,157 @@ async function loadProfitReport() {
                 '<td>' + p.profit_margin + '%</td></tr>'
             ).join('') || '<tr><td colspan="7" style="text-align:center;">No products with cost price set</td></tr>';
         }
+    } catch (e) { alert(e.message); }
+}
+
+
+
+// ============ RECEIPT HISTORY ============
+async function loadReceiptHistory() {
+    try {
+        const receipts = await apiCall('/sales/history');
+        const tbody = document.getElementById('receiptHistoryBody');
+        if (tbody) {
+            tbody.innerHTML = receipts.map(r => 
+                '<tr><td>' + r.receipt_no + '</td><td>' + r.created_at + '</td><td>' + r.cashier + '</td>' +
+                '<td>' + r.items.length + ' items</td><td>KSh ' + r.total_amount.toFixed(2) + '</td>' +
+                '<td><button class="btn btn-secondary" onclick="reprintReceipt(\'' + r.receipt_no + '\')" style="padding: 5px 10px; font-size: 12px;">Reprint</button></td></tr>'
+            ).join('') || '<tr><td colspan="6" style="text-align:center;">No receipts found</td></tr>';
+        }
+    } catch (e) { alert(e.message); }
+}
+
+async function reprintReceipt(receiptNo) {
+    try {
+        const receipts = await apiCall('/sales/history');
+        const receipt = receipts.find(r => r.receipt_no === receiptNo);
+        if (!receipt) { alert('Receipt not found'); return; }
+        
+        let itemsHtml = '';
+        receipt.items.forEach(item => {
+            itemsHtml += '<tr><td>' + item.name + '</td><td style="text-align:center;">' + item.quantity + '</td><td style="text-align:right;">' + item.total_price.toFixed(2) + '</td></tr>';
+        });
+        
+        const receiptHtml = '<!DOCTYPE html><html><head><title>Reprint ' + receipt.receipt_no + '</title>' +
+            '<style>body{font-family:"Courier New",monospace;padding:20px;max-width:300px;margin:auto}' +
+            '.header{text-align:center;margin-bottom:15px}hr{border:none;border-top:1px dashed #000;margin:10px 0}' +
+            'table{width:100%;font-size:12px;border-collapse:collapse}td{padding:3px 0}' +
+            '.total-row{font-weight:bold;font-size:14px}' +
+            '.close-btn{display:block;margin:20px auto;padding:10px 20px;background:#8b4513;color:white;border:none;border-radius:5px;cursor:pointer}' +
+            '@media print{.close-btn{display:none}}</style></head><body>' +
+            '<div class="header"><h2>REPRINT</h2><p>' + (businessSettings ? businessSettings.business_name : '') + '</p></div>' +
+            '<hr><p>Receipt: ' + receipt.receipt_no + '</p><p>Date: ' + receipt.created_at + '</p><hr>' +
+            '<table><thead><tr><th>Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Amount</th></tr></thead>' +
+            '<tbody>' + itemsHtml + '</tbody></table><hr>' +
+            '<table>' +
+            '<tr><td>Subtotal:</td><td style="text-align:right;">' + receipt.subtotal.toFixed(2) + '</td></tr>' +
+            '<tr><td>Tax:</td><td style="text-align:right;">' + receipt.tax_amount.toFixed(2) + '</td></tr>' +
+            '<tr class="total-row"><td>TOTAL:</td><td style="text-align:right;">KSh ' + receipt.total_amount.toFixed(2) + '</td></tr>' +
+            '</table><hr><p>Payment: ' + receipt.payment_method.toUpperCase() + '</p>' +
+            '<button class="close-btn" onclick="window.close()">Close</button>' +
+            '</body></html>';
+        
+        const pw = window.open('', 'Reprint', 'width=400,height=600');
+        pw.document.write(receiptHtml);
+        pw.document.close();
+        setTimeout(() => { try { pw.print(); } catch(e) {} }, 1000);
+        setTimeout(() => { try { pw.close(); } catch(e) {} }, 15000);
+        
+    } catch (e) { alert(e.message); }
+}
+
+// ============ PURCHASE ORDERS ============
+
+
+// ============ PURCHASE ORDERS - DROPDOWN ============
+async function loadProductsForPO() {
+    try {
+        const productList = await apiCall('/products');
+        const select = document.getElementById('poProductId');
+        if (select) {
+            select.innerHTML = '<option value="">Select Product...</option>' + 
+                productList.map(p => 
+                    '<option value="' + p.id + '">' + p.name + ' (' + p.unit + ') - Stock: ' + p.stock + '</option>'
+                ).join('');
+        }
+    } catch (e) { console.error(e); }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const poSelect = document.getElementById('poProductId');
+    if (poSelect) {
+        poSelect.addEventListener('change', async () => {
+            const productId = poSelect.value;
+            const detailsDiv = document.getElementById('poProductDetails');
+            
+            if (!productId) {
+                detailsDiv.innerHTML = 'No product selected';
+                return;
+            }
+            
+            try {
+                const productList = await apiCall('/products');
+                const product = productList.find(p => p.id == productId);
+                
+                if (product) {
+                    detailsDiv.innerHTML = 
+                        '<strong>' + product.name + '</strong><br>' +
+                        'Unit: ' + (product.unit || 'N/A') + '<br>' +
+                        'Current Stock: ' + product.stock + '<br>' +
+                        'Current Cost: KSh ' + (product.cost || 'Not set') + '<br>' +
+                        'Selling Price: KSh ' + product.price;
+                }
+            } catch (e) { console.error(e); }
+        });
+    }
+});
+
+// Update openPOModal to load products
+function openPOModal() {
+    loadProductsForPO();
+    openModal('poModal');
+}
+
+
+document.getElementById('poForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+        await apiCall('/purchase-orders', 'POST', {
+            supplier: document.getElementById('poSupplier').value,
+            product_id: parseInt(document.getElementById('poProductId').value),
+            quantity: parseInt(document.getElementById('poQuantity').value),
+            unit_cost: parseFloat(document.getElementById('poUnitCost').value)
+        });
+        closeModal('poModal');
+        e.target.reset();
+        alert('Purchase Order created!');
+        loadPurchaseOrders();
+    } catch (e) { alert(e.message); }
+});
+
+async function loadPurchaseOrders() {
+    try {
+        const pos = await apiCall('/purchase-orders');
+        const tbody = document.getElementById('poTableBody');
+        if (tbody) {
+            tbody.innerHTML = pos.map(po => 
+                '<tr><td>' + po.id + '</td><td>' + po.supplier + '</td><td>' + po.product_name + '</td>' +
+                '<td>' + po.quantity + '</td><td>KSh ' + po.unit_cost + '</td><td>KSh ' + po.total_cost + '</td>' +
+                '<td>' + po.status.toUpperCase() + '</td>' +
+                '<td>' + (po.status === 'pending' ? 
+                    '<button class="btn btn-success" onclick="updatePOStatus(' + po.id + ', \'received\')" style="padding: 5px 10px; font-size: 12px;">Receive</button>' : 
+                    '-') + '</td></tr>'
+            ).join('') || '<tr><td colspan="8" style="text-align:center;">No purchase orders</td></tr>';
+        }
+    } catch (e) { alert(e.message); }
+}
+
+async function updatePOStatus(poId, status) {
+    try {
+        await apiCall('/purchase-orders/' + poId + '/status?status=' + status, 'PUT');
+        alert('PO marked as received! Stock updated.');
+        loadPurchaseOrders();
+        loadProducts();
     } catch (e) { alert(e.message); }
 }
 

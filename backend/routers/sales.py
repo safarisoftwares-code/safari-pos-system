@@ -168,3 +168,37 @@ async def daily_close(current_user=Depends(get_current_user), db: Session = Depe
         "credit_total": credit_total,
         "grand_total": total
     }
+
+
+@router.get("/history")
+async def receipt_history(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get all receipts with items for reprinting"""
+    if current_user.role in ["admin", "manager"]:
+        sales = db.query(Sale).order_by(Sale.created_at.desc()).limit(50).all()
+    else:
+        sales = db.query(Sale).filter(Sale.cashier_id == current_user.id).order_by(Sale.created_at.desc()).limit(50).all()
+    
+    result = []
+    for sale in sales:
+        items = db.query(SaleItem).filter(SaleItem.sale_id == sale.id).all()
+        result.append({
+            "receipt_no": sale.receipt_no,
+            "total_amount": sale.total_amount,
+            "subtotal": sale.subtotal,
+            "tax_amount": sale.tax_amount,
+            "discount": sale.discount,
+            "payment_method": sale.payment_method,
+            "created_at": sale.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "cashier": db.query(User).filter(User.id == sale.cashier_id).first().name,
+            "items": [
+                {
+                    "name": db.query(Product).filter(Product.id == item.product_id).first().name if db.query(Product).filter(Product.id == item.product_id).first() else "Unknown",
+                    "quantity": item.quantity,
+                    "unit_price": item.unit_price,
+                    "total_price": item.total_price
+                }
+                for item in items
+            ]
+        })
+    
+    return result

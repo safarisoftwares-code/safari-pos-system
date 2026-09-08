@@ -20,6 +20,8 @@
                 <li><a onclick="showView('categories')">Categories</a></li>
                 <li><a onclick="showView('users')">Users</a></li>
                 <li><a onclick="showView('reports')">Reports</a></li>
+                <li><a onclick="showView('receipts')">Receipts</a></li>
+                <li><a onclick="showView('purchaseOrders')">Purchase Orders</a></li>
                 <li><a onclick="showView('backup')">Backup</a></li>
                 <li><a onclick="showView('settings')">Settings</a></li>
                 <li><a id="logoutBtn" style="color: #ff6b6b;">Logout</a></li>
@@ -177,6 +179,54 @@
                 </div>
             </div>
 
+            <div id="receipts" class="view" style="display:none;">
+                <h2 style="margin-bottom: 20px;">Receipt History</h2>
+                <div class="card">
+                    <div class="data-table">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th>Receipt No</th>
+                                    <th>Date/Time</th>
+                                    <th>Cashier</th>
+                                    <th>Items</th>
+                                    <th>Total</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="receiptHistoryBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="purchaseOrders" class="view" style="display:none;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <h2>Purchase Orders</h2>
+                    <button class="btn btn-primary" onclick="openPOModal()" style="width: auto; padding: 10px 20px;">New PO</button>
+                </div>
+                <div class="card">
+                    <div class="data-table">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Supplier</th>
+                                    <th>Product</th>
+                                    <th>Unit</th>
+                                    <th>Qty</th>
+                                    <th>Unit Cost</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="poTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <div id="reports" class="view" style="display:none;">
                 <div class="card" style="margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -199,6 +249,7 @@
                             <thead>
                                 <tr>
                                     <th>Product</th>
+                                    <th>Unit</th>
                                     <th>Selling Price</th>
                                     <th>Tax</th>
                                     <th>Net Selling</th>
@@ -446,6 +497,43 @@
                 <div style="display: flex; gap: 10px;">
                     <button type="submit" class="btn btn-primary" style="flex: 1;">Adjust</button>
                     <button type="button" class="btn btn-danger" onclick="closeModal('stockModal')" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- PO Modal -->
+    <div id="poModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color: #8b4513; margin-bottom: 20px;">New Purchase Order</h3>
+            <form id="poForm">
+                <div class="form-group">
+                    <label>Supplier Name</label>
+                    <input type="text" id="poSupplier" required placeholder="e.g., Raha Mills Ltd">
+                </div>
+                <div class="form-group">
+                    <label>Select Product (from Products list)</label>
+                    <select id="poProductId" required style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px;">
+                        <option value="">Select Product...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Selected Product Details</label>
+                    <div id="poProductDetails" style="background: #f5e6d3; padding: 10px; border-radius: 5px; font-size: 14px;">
+                        No product selected
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Quantity</label>
+                    <input type="number" id="poQuantity" required min="1">
+                </div>
+                <div class="form-group">
+                    <label>Unit Cost (KSh)</label>
+                    <input type="number" id="poUnitCost" step="0.01" required>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Create PO</button>
+                    <button type="button" class="btn btn-danger" onclick="closeModal('poModal')" style="flex: 1;">Cancel</button>
                 </div>
             </form>
         </div>

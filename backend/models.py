@@ -69,6 +69,21 @@ class Sale(Base):
     cashier = relationship("User", back_populates="sales")
     items = relationship("SaleItem", back_populates="sale")
 
+
+
+class PurchaseOrder(Base):
+    __tablename__ = "purchase_orders"
+    id = Column(Integer, primary_key=True, index=True)
+    supplier = Column(String, nullable=False)
+    product_name = Column(String, nullable=False)
+    unit = Column(String, nullable=True)
+    quantity = Column(Integer, nullable=False)
+    unit_cost = Column(Float, nullable=False)
+    total_cost = Column(Float, nullable=False)
+    status = Column(String, default="pending")  # pending, received, cancelled
+    created_by = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class SaleItem(Base):
     __tablename__ = "sale_items"
     id = Column(Integer, primary_key=True, index=True)
