@@ -158,9 +158,9 @@ function updateCart() {
             return '<div style="display:flex;align-items:center;justify-content:space-between;padding:15px;border-bottom:1px solid #ecf0f1;gap:10px">' +
                 '<div style="flex:2"><strong style="font-size:14px">' + i.name + '</strong>' + (i.unit ? ' <small>(' + i.unit + ')</small>' : '') + '<br><small style="color:#666">KSh ' + i.unit_price + ' each</small></div>' +
                 '<div style="flex:1;display:flex;align-items:center;gap:8px;justify-content:center">' +
-                '<button onclick="updateQuantity(' + i.product_id + ',-1)" style="width:30px;height:30px;font-size:18px;background:#FF6600;color:white;border:none;border-radius:5px;cursor:pointer">-</button>' +
+                '<button onclick="updateQuantity(' + i.product_id + ',-1)" style="width:24px;height:24px;font-size:14px;background:#f0f0f0;color:#333;border:1px solid #ddd;border-radius:3px;cursor:pointer">-</button>' +
                 '<span style="font-size:16px;font-weight:bold;min-width:30px;text-align:center">' + i.quantity + '</span>' +
-                '<button onclick="updateQuantity(' + i.product_id + ',1)" style="width:30px;height:30px;font-size:18px;background:#FF6600;color:white;border:none;border-radius:5px;cursor:pointer">+</button>' +
+                '<button onclick="updateQuantity(' + i.product_id + ',1)" style="width:24px;height:24px;font-size:14px;background:#f0f0f0;color:#333;border:1px solid #ddd;border-radius:3px;cursor:pointer">+</button>' +
                 '</div>' +
                 '<div style="flex:1.5;text-align:right"><strong style="font-size:14px">KSh ' + lineTotal.toFixed(2) + '</strong><br><small style="color:#d2691e">Tax: KSh ' + lineTax.toFixed(2) + '</small></div>' +
                 '<button onclick="removeFromCart(' + i.product_id + ')" style="background:#d32f2f;color:white;border:none;border-radius:5px;width:25px;height:25px;cursor:pointer;font-size:14px">X</button>' +
