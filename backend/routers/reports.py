@@ -40,8 +40,11 @@ async def profit_report(current_user=Depends(get_current_user), db: Session = De
     for product in products:
         if product.cost and product.cost > 0:
             tax_rate = product.tax_rate or 16
+            # INCLUSIVE TAX: Price already includes tax
+            # Net selling = Price - Tax portion
             net_selling = product.price / (1 + tax_rate / 100)
-            gross_profit = net_selling - product.cost
+            cost = product.cost or 0
+            gross_profit = net_selling - cost
             profit_margin = (gross_profit / net_selling * 100) if net_selling > 0 else 0
             
             profit_data.append({

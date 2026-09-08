@@ -56,6 +56,7 @@ class ProductResponse(BaseModel):
     unit: Optional[str]
     category_id: Optional[int]
     price: float
+    tax_rate: Optional[float] = 0
     stock: int
     low_stock_alert: int
     class Config:

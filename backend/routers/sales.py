@@ -27,7 +27,13 @@ async def create_sale(sale_data: SaleCreate, current_user=Depends(get_current_us
             raise HTTPException(status_code=400, detail=f"Insufficient stock for {product.name}")
         
         line_total = item.quantity * item.unit_price
-        line_tax = line_total * (product.tax_rate / 100) if product.tax_rate else 0
+        # INCLUSIVE TAX: Tax is embedded in the price
+        # Tax = Price - (Price / (1 + rate))
+        if product.tax_rate and product.tax_rate > 0:
+            rate = product.tax_rate / 100
+            line_tax = line_total - (line_total / (1 + rate))
+        else:
+            line_tax = 0
         
         subtotal += line_total
         total_tax += line_tax
@@ -42,7 +48,8 @@ async def create_sale(sale_data: SaleCreate, current_user=Depends(get_current_us
         })
     
     discount = sale_data.discount
-    total = subtotal + total_tax - discount
+    # Tax is INCLUSIVE - total = subtotal - discount (tax already in subtotal)
+    total = subtotal - discount
     
     sale = Sale(
         receipt_no=generate_receipt_no(db),
@@ -202,3 +209,43 @@ async def receipt_history(current_user=Depends(get_current_user), db: Session = 
         })
     
     return result
+
+
+@router.get("/last-receipt")
+async def get_last_receipt(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get only the LAST receipt - for reprint after printer failure"""
+    
+    if current_user.role in ["admin", "manager"]:
+        sale = db.query(Sale).order_by(Sale.created_at.desc()).first()
+    else:
+        # Cashier: only THEIR last receipt from today
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        sale = db.query(Sale).filter(
+            Sale.cashier_id == current_user.id,
+            Sale.created_at >= today
+        ).order_by(Sale.created_at.desc()).first()
+    
+    if not sale:
+        return {"message": "No receipt found"}
+    
+    items = db.query(SaleItem).filter(SaleItem.sale_id == sale.id).all()
+    
+    return {
+        "receipt_no": sale.receipt_no,
+        "total_amount": sale.total_amount,
+        "subtotal": sale.subtotal,
+        "tax_amount": sale.tax_amount,
+        "discount": sale.discount,
+        "payment_method": sale.payment_method,
+        "created_at": sale.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "cashier": db.query(User).filter(User.id == sale.cashier_id).first().name,
+        "items": [
+            {
+                "name": db.query(Product).filter(Product.id == item.product_id).first().name if db.query(Product).filter(Product.id == item.product_id).first() else "Unknown",
+                "quantity": item.quantity,
+                "unit_price": item.unit_price,
+                "total_price": item.total_price
+            }
+            for item in items
+        ]
+    }

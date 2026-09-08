@@ -35,7 +35,12 @@ async def get_settings(current_user=Depends(get_current_user), db: Session = Dep
         "business_location": get_setting("business_location") or "",
         "business_phone": get_setting("business_phone") or "",
         "business_tax_pin": get_setting("business_tax_pin") or "",
-        "receipt_footer": get_setting("receipt_footer") or "Thank you! Karibu Tena!"
+        "receipt_footer": get_setting("receipt_footer") or "Thank you! Karibu Tena!",
+        "mpesa_enabled": get_setting("mpesa_enabled") or "false",
+        "mpesa_consumer_key": get_setting("mpesa_consumer_key") or "",
+        "mpesa_consumer_secret": get_setting("mpesa_consumer_secret") or "",
+        "mpesa_passkey": get_setting("mpesa_passkey") or "",
+        "mpesa_shortcode": get_setting("mpesa_shortcode") or ""
     }
 
 @router.put("/tax-rate")

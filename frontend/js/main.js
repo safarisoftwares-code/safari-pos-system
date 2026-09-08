@@ -5,22 +5,26 @@ let discount = 0;
 let businessSettings = null;
 
 function showView(viewName) {
+    const user = authManager.getUser();
+    if (user && user.role === 'cashier') {
+        const allowed = ['dashboard', 'pos', 'receipts'];
+        if (!allowed.includes(viewName)) { alert('Access denied.'); return; }
+    }
     document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
-    document.getElementById(viewName).style.display = 'block';
+    const targetView = document.getElementById(viewName);
+    if (targetView) { targetView.style.display = 'block'; }
     document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
-    event.target.classList.add('active');
     document.getElementById('sidebar').classList.remove('active');
-    
     if (viewName === 'products') loadProducts();
     if (viewName === 'categories') loadCategories();
     if (viewName === 'users') loadUsers();
     if (viewName === 'reports') { loadAllSales(); loadLowStock(); loadDailyClose(); loadProfitReport(); }
     if (viewName === 'pos') loadProductsForPOS();
     if (viewName === 'backup') loadBackups();
+    if (viewName === 'settings') { loadSettings(); loadMpesaSettings(); }
+    if (viewName === 'dashboard') loadDashboard();
     if (viewName === 'receipts') loadReceiptHistory();
     if (viewName === 'purchaseOrders') loadPurchaseOrders();
-    if (viewName === 'settings') loadSettings();
-    if (viewName === 'dashboard') loadDashboard();
 }
 
 function openModal(id) { document.getElementById(id).classList.add('active'); }
@@ -30,32 +34,18 @@ function openCategoryModal() { openModal('categoryModal'); }
 function openUserModal() { openModal('userModal'); }
 
 async function apiCall(url, method = 'GET', data = null) {
-    const options = {
-        method: method,
-        headers: authManager.getAuthHeaders()
-    };
+    const options = { method: method, headers: authManager.getAuthHeaders() };
     if (data) options.body = JSON.stringify(data);
-    
     const response = await fetch(API_BASE_URL + url, options);
-    
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Request failed');
-    }
-    
+    if (!response.ok) { const error = await response.json(); throw new Error(error.detail || 'Request failed'); }
     return response.json();
 }
 
-// ============ CATEGORIES ============
 async function loadCategories() {
     try {
         categories = await apiCall('/products/categories');
         const tbody = document.getElementById('categoriesTableBody');
-        if (tbody) {
-            tbody.innerHTML = categories.map(c => 
-                '<tr><td>' + c.id + '</td><td>' + c.name + '</td><td>' + (c.description || '-') + '</td></tr>'
-            ).join('') || '<tr><td colspan="3" style="text-align:center;">No categories yet</td></tr>';
-        }
+        if (tbody) { tbody.innerHTML = categories.map(c => '<tr><td>' + c.id + '</td><td>' + c.name + '</td><td>' + (c.description || '-') + '</td></tr>').join('') || '<tr><td colspan="3">No categories</td></tr>'; }
     } catch (e) { console.error(e); }
 }
 
@@ -63,33 +53,12 @@ async function loadCategoriesForSelect() {
     try {
         categories = await apiCall('/products/categories');
         const select = document.getElementById('productCategory');
-        if (select) {
-            select.innerHTML = '<option value="">Select Category</option>' + 
-                categories.map(c => '<option value="' + c.id + '">' + c.name + '</option>').join('');
-        }
+        if (select) { select.innerHTML = '<option value="">Select Category</option>' + categories.map(c => '<option value="' + c.id + '">' + c.name + '</option>').join(''); }
         const posFilter = document.getElementById('posCategoryFilter');
-        if (posFilter) {
-            posFilter.innerHTML = '<option value="all">All Categories</option>' + 
-                categories.map(c => '<option value="' + c.id + '">' + c.name + '</option>').join('');
-        }
+        if (posFilter) { posFilter.innerHTML = '<option value="all">All Categories</option>' + categories.map(c => '<option value="' + c.id + '">' + c.name + '</option>').join(''); }
     } catch (e) { console.error(e); }
 }
 
-document.getElementById('categoryForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-        await apiCall('/products/categories', 'POST', {
-            name: document.getElementById('categoryName').value,
-            description: document.getElementById('categoryDescription').value || null
-        });
-        closeModal('categoryModal');
-        e.target.reset();
-        alert('Category added!');
-        loadCategories();
-    } catch (e) { alert(e.message); }
-});
-
-// ============ PRODUCTS ============
 async function loadProducts() {
     try {
         products = await apiCall('/products');
@@ -97,209 +66,107 @@ async function loadProducts() {
         if (tbody) {
             tbody.innerHTML = products.map(p => {
                 const cat = categories.find(c => c.id === p.category_id);
-                return '<tr><td>' + p.id + '</td><td>' + p.name + '</td><td>' + (p.unit || '-') + '</td><td>' + (cat ? cat.name : '-') + '</td><td>KSh ' + p.price + '</td><td>' + (p.tax_rate || 16) + '%</td><td>' + p.stock + '</td><td><button class="btn btn-secondary" onclick="openStockModal(' + p.id + ')" style="padding: 5px 10px; font-size: 12px; margin-right: 5px; background: #d2691e; color: white; border: none; border-radius: 5px; cursor: pointer;">Stock</button> <button class="btn btn-danger" onclick="deleteProduct(' + p.id + ')" style="padding: 5px 10px; font-size: 12px;">Delete</button></td></tr>';
-            }).join('') || '<tr><td colspan="8" style="text-align:center;">No products yet</td></tr>';
+                const taxLabel = (p.tax_rate || 0) > 0 ? 'A' : 'B';
+                return '<tr><td>' + p.id + '</td><td>' + p.name + '</td><td>' + (p.unit || '-') + '</td><td>' + (cat ? cat.name : '-') + '</td><td>KSh ' + p.price + '</td><td style="text-align:center;font-weight:bold">' + taxLabel + '</td><td>' + p.stock + '</td><td><button onclick="openEditProductModal(' + p.id + ')" style="padding:5px 10px;font-size:12px;margin-right:3px;background:#2e7d32;color:white;border:none;border-radius:3px">Edit</button> <button onclick="openStockModal(' + p.id + ')" style="padding:5px 10px;font-size:12px;margin-right:3px">Stock</button> <button onclick="deleteProduct(' + p.id + ')" style="padding:5px 10px;font-size:12px;color:red">Delete</button></td></tr>';
+            }).join('') || '<tr><td colspan="8">No products</td></tr>';
         }
     } catch (e) { alert(e.message); }
 }
 
 async function loadProductsForPOS() {
     await loadCategoriesForSelect();
-    try {
-        products = await apiCall('/products');
-        renderPOSProducts(products);
-    } catch (e) { alert(e.message); }
+    try { products = await apiCall('/products'); renderPOSProducts(products); } catch (e) { alert(e.message); }
 }
 
 function renderPOSProducts(list) {
     const grid = document.getElementById('productGrid');
-    if (grid) {
-        grid.innerHTML = list.map(p => 
-            '<div class="product-card" onclick="addToCart(' + p.id + ')">' +
-            '<div class="product-name">' + p.name + '</div>' +
-            (p.unit ? '<div style="font-size: 12px; color: #666;">' + p.unit + '</div>' : '') +
-            '<div class="product-price">KSh ' + p.price + '</div>' +
-            '<div style="font-size: 11px; color: #d2691e;">Tax: ' + (p.tax_rate || 16) + '%</div>' +
-            (p.stock <= 0 
-                ? '<div style="background: #d32f2f; color: white; padding: 2px 5px; border-radius: 3px; font-size: 11px;">OUT OF STOCK</div>'
-                : '<div class="product-stock">Stock: ' + p.stock + '</div>') +
-            '</div>'
-        ).join('');
-    }
+    if (grid) { grid.innerHTML = list.map(p => '<div class="product-card" onclick="addToCart(' + p.id + ')"><div class="product-name">' + p.name + '</div>' + (p.unit ? '<div style="font-size:12px;color:#666">' + p.unit + '</div>' : '') + '<div class="product-price">KSh ' + p.price + '</div>' + (p.stock <= 0 ? '<div style="background:#d32f2f;color:white;padding:2px 5px;border-radius:3px;font-size:11px">OUT OF STOCK</div>' : '<div class="product-stock">Stock: ' + p.stock + '</div>') + '</div>').join(''); }
 }
 
-document.getElementById('productForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-        await apiCall('/products', 'POST', {
-            name: document.getElementById('productName').value,
-            barcode: document.getElementById('productBarcode').value || null,
-            unit: document.getElementById('productUnit').value || null,
-            category_id: document.getElementById('productCategory').value ? parseInt(document.getElementById('productCategory').value) : null,
-            price: parseFloat(document.getElementById('productPrice').value),
-            cost: parseFloat(document.getElementById('productCost').value) || null,
-            tax_rate: parseFloat(document.getElementById('productTaxRate').value) || 0,
-            stock: parseInt(document.getElementById('productStock').value)
-        });
-        closeModal('productModal');
-        e.target.reset();
-        alert('Product added!');
-        loadProducts();
-    } catch (e) { alert(e.message); }
-});
+function openEditProductModal(productId) {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    document.getElementById('editProductId').value = product.id;
+    document.getElementById('editProductName').value = product.name;
+    document.getElementById('editProductUnit').value = product.unit || '';
+    document.getElementById('editProductPrice').value = product.price;
+    document.getElementById('editProductTaxRate').value = product.tax_rate || 0;
+    document.getElementById('editProductStock').value = product.stock;
+    document.getElementById('editProductModal').classList.add('active');
+}
 
 async function deleteProduct(id) {
-    const product = products.find(p => p.id === id);
-    const firstName = prompt('Type DELETE to confirm deletion of: ' + (product ? product.name : 'this product') + '\n\nThis cannot be undone!');
-    if (firstName !== 'DELETE') {
-        alert('Deletion cancelled. You must type DELETE exactly.');
-        return;
-    }
-    const secondConfirm = confirm('Are you ABSOLUTELY sure?\n\nProduct: ' + (product ? product.name : 'Unknown') + '\n\nThis will permanently remove the product from active list.');
-    if (!secondConfirm) return;
-    
-    try {
-        await apiCall('/products/' + id, 'DELETE');
-        alert('Product deleted successfully.');
-        loadProducts();
-    } catch (e) { alert(e.message); }
+    if (prompt('Type DELETE to confirm:') !== 'DELETE') return;
+    if (!confirm('Are you sure?')) return;
+    try { await apiCall('/products/' + id, 'DELETE'); loadProducts(); } catch (e) { alert(e.message); }
 }
 
-// ============ USERS ============
 async function loadUsers() {
     try {
         const users = await apiCall('/users');
-        document.getElementById('usersTableBody').innerHTML = users.map(u => 
-            '<tr><td>' + u.id + '</td><td>' + u.name + '</td><td>' + u.email + '</td><td>' + u.role.toUpperCase() + '</td>' +
-            '<td><button class="btn btn-danger" onclick="deleteUser(' + u.id + ')" style="padding: 5px 10px; font-size: 12px;">Remove</button></td></tr>'
-        ).join('');
+        document.getElementById('usersTableBody').innerHTML = users.map(u => '<tr><td>' + u.id + '</td><td>' + u.name + '</td><td>' + u.email + '</td><td>' + u.role.toUpperCase() + '</td><td><button onclick="deleteUser(' + u.id + ')" style="padding:5px 10px;font-size:12px;color:red">Remove</button></td></tr>').join('');
     } catch (e) { alert(e.message); }
 }
 
 async function deleteUser(id) {
-    const firstName = prompt('Type DELETE to confirm deactivation of this user.\n\nSales records will be preserved.');
-    if (firstName !== 'DELETE') {
-        alert('Deactivation cancelled.');
-        return;
-    }
-    const secondConfirm = confirm('Final confirmation: Deactivate this user?\n\nThey will no longer be able to login.');
-    if (!secondConfirm) return;
-    
-    try {
-        await apiCall('/users/' + id, 'DELETE');
-        alert('User deactivated successfully.');
-        loadUsers();
-    } catch (e) { alert(e.message); }
+    if (prompt('Type DELETE to confirm:') !== 'DELETE') return;
+    if (!confirm('Deactivate?')) return;
+    try { await apiCall('/users/' + id, 'DELETE'); loadUsers(); } catch (e) { alert(e.message); }
 }
 
-document.getElementById('userForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-        await apiCall('/users', 'POST', {
-            name: document.getElementById('userNameInput').value,
-            email: document.getElementById('userEmail').value,
-            password: document.getElementById('userPassword').value,
-            role: document.getElementById('userRoleSelect').value
-        });
-        closeModal('userModal');
-        e.target.reset();
-        alert('User added!');
-        loadUsers();
-    } catch (e) { alert(e.message); }
-});
-
-// ============ POS / CART ============
 function addToCart(productId) {
     const product = products.find(p => p.id === productId);
-    if (!product) { alert('Product not found!'); return; }
-    if (product.stock <= 0) { 
-        alert('❌ OUT OF STOCK!\n\n' + product.name + '\n\nStock Remaining: 0 units\n\nYou cannot sell what you do not have.\n\nPlease restock this item.');
-        return; 
-    }
-    
+    if (!product) return;
+    if (product.stock <= 0) { alert('OUT OF STOCK!'); return; }
     const existing = cart.find(i => i.product_id === productId);
     if (existing) {
-        if (existing.quantity >= product.stock) { alert('Not enough stock!'); return; }
+        if (existing.quantity >= product.stock) { alert('NOT ENOUGH STOCK! Available: ' + product.stock); return; }
         existing.quantity++;
     } else {
-        cart.push({ 
-            product_id: product.id, 
-            name: product.name, 
-            unit: product.unit, 
-            quantity: 1, 
-            unit_price: product.price, 
-            tax_rate: product.tax_rate || 16,
-            stock: product.stock 
-        });
+        cart.push({ product_id: product.id, name: product.name, unit: product.unit, quantity: 1, unit_price: product.price, tax_rate: product.tax_rate || 0, stock: product.stock });
     }
     updateCart();
 }
 
-function removeFromCart(productId) {
-    cart = cart.filter(i => i.product_id !== productId);
-    updateCart();
-}
+function removeFromCart(productId) { cart = cart.filter(i => i.product_id !== productId); updateCart(); }
 
 function updateQuantity(productId, change) {
     const item = cart.find(i => i.product_id === productId);
     if (!item) return;
     item.quantity += change;
     if (item.quantity <= 0) { removeFromCart(productId); return; }
-    if (item.quantity > item.stock) { 
-        alert('⚠️ NOT ENOUGH STOCK!\n\n' + item.name + '\n\nAvailable: ' + item.stock + ' units\nRequested: ' + item.quantity + ' units\n\nReduce quantity or restock.');
-        item.quantity -= change; 
-        return; 
-    }
+    if (item.quantity > item.stock) { alert('NOT ENOUGH STOCK! Available: ' + item.stock); item.quantity -= change; return; }
     updateCart();
 }
 
 function updateCart() {
     const cartDiv = document.getElementById('cartItems');
-    
-    let subtotal = 0;
-    let taxAmount = 0;
-    
+    let subtotal = 0, taxAmount = 0;
     cart.forEach(item => {
         const lineTotal = item.quantity * item.unit_price;
-        const itemTaxRate = item.tax_rate || 16;
-        const lineTax = lineTotal * (itemTaxRate / 100);
-        subtotal += lineTotal;
-        taxAmount += lineTax;
+        const taxRate = item.tax_rate || 0;
+        const lineTax = taxRate > 0 ? lineTotal - (lineTotal / (1 + taxRate / 100)) : 0;
+        subtotal += lineTotal; taxAmount += lineTax;
     });
-    
     const discountAmount = subtotal * (discount / 100);
-    const total = subtotal + taxAmount - discountAmount;
-    
+    const total = subtotal - discountAmount;
     if (cartDiv) {
-        if (cart.length === 0) {
-            cartDiv.innerHTML = '<p style="color: #95a5a6; text-align: center; margin-top: 50px;">Cart is empty</p>';
-        } else {
-            cartDiv.innerHTML = cart.map(i => {
-                const lineTotal = i.quantity * i.unit_price;
-                const itemTaxRate = i.tax_rate || 16;
-                const lineTax = lineTotal * (itemTaxRate / 100);
-                
-                return '<div class="cart-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #ecf0f1;">' +
-                    '<div style="flex: 2;">' +
-                        '<strong>' + i.name + '</strong>' +
-                        (i.unit ? ' <small>(' + i.unit + ')</small>' : '') +
-                        '<br><small>KSh ' + i.unit_price + ' each</small>' +
-                    '</div>' +
-                    '<div style="flex: 1; display: flex; gap: 5px; align-items: center;">' +
-                        '<button onclick="updateQuantity(' + i.product_id + ', -1)" style="width: 25px; height: 25px; cursor: pointer;">-</button>' +
-                        '<span>' + i.quantity + '</span>' +
-                        '<button onclick="updateQuantity(' + i.product_id + ', 1)" style="width: 25px; height: 25px; cursor: pointer;">+</button>' +
-                    '</div>' +
-                    '<div style="flex: 2; text-align: right;">' +
-                        '<strong>KSh ' + lineTotal.toFixed(2) + '</strong>' +
-                        '<br><small style="color: #d2691e;">Tax: KSh ' + lineTax.toFixed(2) + '</small>' +
-                    '</div>' +
-                    '<button onclick="removeFromCart(' + i.product_id + ')" style="color: red; background: none; border: none; cursor: pointer; font-size: 18px;">X</button>' +
+        cartDiv.innerHTML = cart.map(i => {
+            const lineTotal = i.quantity * i.unit_price;
+            const taxRate = i.tax_rate || 0;
+            const lineTax = taxRate > 0 ? lineTotal - (lineTotal / (1 + taxRate / 100)) : 0;
+            return '<div style="display:flex;align-items:center;justify-content:space-between;padding:15px;border-bottom:1px solid #ecf0f1;gap:10px">' +
+                '<div style="flex:2"><strong style="font-size:14px">' + i.name + '</strong>' + (i.unit ? ' <small>(' + i.unit + ')</small>' : '') + '<br><small style="color:#666">KSh ' + i.unit_price + ' each</small></div>' +
+                '<div style="flex:1;display:flex;align-items:center;gap:8px;justify-content:center">' +
+                '<button onclick="updateQuantity(' + i.product_id + ',-1)" style="width:30px;height:30px;font-size:18px;background:#FF6600;color:white;border:none;border-radius:5px;cursor:pointer">-</button>' +
+                '<span style="font-size:16px;font-weight:bold;min-width:30px;text-align:center">' + i.quantity + '</span>' +
+                '<button onclick="updateQuantity(' + i.product_id + ',1)" style="width:30px;height:30px;font-size:18px;background:#FF6600;color:white;border:none;border-radius:5px;cursor:pointer">+</button>' +
+                '</div>' +
+                '<div style="flex:1.5;text-align:right"><strong style="font-size:14px">KSh ' + lineTotal.toFixed(2) + '</strong><br><small style="color:#d2691e">Tax: KSh ' + lineTax.toFixed(2) + '</small></div>' +
+                '<button onclick="removeFromCart(' + i.product_id + ')" style="background:#d32f2f;color:white;border:none;border-radius:5px;width:25px;height:25px;cursor:pointer;font-size:14px">X</button>' +
                 '</div>';
-            }).join('');
-        }
+        }).join('') || '<p style="color:#95a5a6;text-align:center;margin-top:50px">Cart is empty</p>';
     }
-    
     document.getElementById('subtotal').textContent = 'KSh ' + subtotal.toFixed(2);
     document.getElementById('tax').textContent = 'KSh ' + taxAmount.toFixed(2);
     document.getElementById('discount').textContent = '-KSh ' + discountAmount.toFixed(2);
@@ -308,180 +175,136 @@ function updateCart() {
 
 async function checkout() {
     if (cart.length === 0) { alert('Cart is empty!'); return; }
-    
-    // Verify stock before checkout
     for (const item of cart) {
         const product = products.find(p => p.id === item.product_id);
-        if (product && product.stock <= 0) {
-            alert('❌ OUT OF STOCK!\n\n' + item.name + '\n\nStock Remaining: 0 units\n\nRemove from cart to continue.');
-            return;
-        }
-        if (product && item.quantity > product.stock) {
-            alert('⚠️ INSUFFICIENT STOCK!\n\n' + item.name + '\n\nAvailable: ' + product.stock + ' units\nIn Cart: ' + item.quantity + ' units\n\nReduce quantity or remove item.');
-            return;
-        }
+        if (product && product.stock <= 0) { alert('OUT OF STOCK: ' + item.name); return; }
+        if (product && item.quantity > product.stock) { alert('INSUFFICIENT STOCK: ' + item.name); return; }
     }
-    
-    // Payment method selection modal
     const method = prompt('Payment method (cash/mpesa/card):', 'cash');
     if (!method) return;
-    
     try {
-        const sale = await apiCall('/sales', 'POST', {
-            items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price })),
-            payment_method: method,
-            discount: discount
-        });
-        
-        // Reload fresh business settings before printing
-        await loadBusinessSettings();
-        
-        // Print receipt
+        const sale = await apiCall('/sales', 'POST', { items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price })), payment_method: method, discount: discount });
         printReceipt(sale);
-        
-        cart = [];
-        discount = 0;
+        cart = []; discount = 0;
         document.getElementById('discountInput').value = 0;
-        updateCart();
-        loadProductsForPOS();
-        loadDashboard();
+        updateCart(); loadProductsForPOS(); loadDashboard();
     } catch (e) { alert(e.message); }
 }
 
 function printReceipt(sale) {
-    // Build receipt HTML using ONLY businessSettings
     let itemsHtml = '';
     sale.items.forEach(item => {
-        const lineTotal = item.quantity * item.unit_price;
-        itemsHtml += '<tr>' +
-            '<td>' + item.name + (item.unit ? ' (' + item.unit + ')' : '') + '</td>' +
-            '<td style="text-align:center;">' + item.quantity + '</td>' +
-            '<td style="text-align:right;">' + lineTotal.toFixed(2) + '</td>' +
-            '</tr>';
+        const taxLabel = (item.tax_rate || 0) > 0 ? 'A' : 'B';
+        itemsHtml += '<tr><td>' + item.name + (item.unit ? ' (' + item.unit + ')' : '') + '</td><td style="text-align:center">' + item.quantity + '</td><td style="text-align:center;font-weight:bold">' + taxLabel + '</td><td style="text-align:right">' + item.total_price.toFixed(2) + '</td></tr>';
     });
-    
-    // Build header from businessSettings
-    let headerHtml = '';
-    if (businessSettings) {
-        headerHtml += '<h2>' + (businessSettings.business_name || '') + '</h2>';
-        if (businessSettings.business_po_box) {
-            headerHtml += '<p>' + businessSettings.business_po_box + '</p>';
-        }
-        if (businessSettings.business_location) {
-            headerHtml += '<p>' + businessSettings.business_location + '</p>';
-        }
-        if (businessSettings.business_phone) {
-            headerHtml += '<p>Tel: ' + businessSettings.business_phone + '</p>';
-        }
-    }
-    
-    // Build tax PIN line
-    let taxPinHtml = '';
-    if (businessSettings && businessSettings.business_tax_pin) {
-        taxPinHtml = '<p style="font-size:11px;">Tax PIN: ' + businessSettings.business_tax_pin + '</p>';
-    }
-    
-    // Build footer
-    let footerHtml = '';
-    if (businessSettings && businessSettings.receipt_footer) {
-        footerHtml += '<p>' + businessSettings.receipt_footer + '</p>';
-    }
-    footerHtml += '<hr><p style="font-size:10px; color:#666;">Safari POS - (c) Safari Softwares</p>';
-    
-    const receiptHtml = '<!DOCTYPE html><html><head><title>Receipt ' + sale.receipt_no + '</title>' +
-        '<style>' +
-        'body { font-family: "Courier New", monospace; padding: 20px; max-width: 300px; margin: auto; }' +
-        '.header { text-align: center; margin-bottom: 15px; }' +
-        '.header h2 { margin: 0; font-size: 18px; }' +
-        '.header p { margin: 2px 0; font-size: 12px; }' +
-        'hr { border: none; border-top: 1px dashed #000; margin: 10px 0; }' +
-        'table { width: 100%; font-size: 12px; border-collapse: collapse; }' +
-        'th { text-align: left; padding: 3px 0; }' +
-        'td { padding: 3px 0; }' +
-        '.total-row { font-weight: bold; font-size: 14px; }' +
-        '.footer { text-align: center; margin-top: 15px; font-size: 11px; }' +
-        '.close-btn { display: block; margin: 20px auto; padding: 10px 20px; background: #8b4513; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }' +
-        '@media print { body { margin: 0; } .close-btn { display: none; } }' +
-        '</style></head><body>' +
-        '<div class="header">' + headerHtml + '</div>' +
-        '<hr>' +
-        '<p style="font-size:12px;">Receipt: ' + sale.receipt_no + '</p>' +
-        '<p style="font-size:12px;">Date: ' + new Date(sale.created_at).toLocaleString() + '</p>' +
-        '<hr>' +
-        taxPinHtml +
-        '<hr>' +
-        '<table>' +
-        '<thead><tr><th>Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Amount</th></tr></thead>' +
-        '<tbody>' + itemsHtml + '</tbody>' +
-        '</table>' +
-        '<hr>' +
-        '<table>' +
-        '<tr><td>Subtotal:</td><td style="text-align:right;">' + sale.subtotal.toFixed(2) + '</td></tr>' +
-        '<tr><td>Tax:</td><td style="text-align:right;">' + sale.tax_amount.toFixed(2) + '</td></tr>' +
-        '<tr><td>Discount:</td><td style="text-align:right;">-' + sale.discount.toFixed(2) + '</td></tr>' +
-        '<tr class="total-row"><td>TOTAL:</td><td style="text-align:right;">KSh ' + sale.total_amount.toFixed(2) + '</td></tr>' +
-        '</table>' +
-        '<hr>' +
-        '<p style="font-size:12px;">Payment: ' + sale.payment_method.toUpperCase() + '</p>' +
-        '<div class="footer">' + footerHtml + '</div>' +
-        '<button class="close-btn" onclick="window.close()">Close Receipt</button>' +
-        '</body></html>';
-    
-    // Open print window
-    const printWindow = window.open('', 'Receipt', 'width=400,height=600');
-    printWindow.document.write(receiptHtml);
-    printWindow.document.close();
-    
-    // Auto print after 1 second
-    setTimeout(() => {
-        try { printWindow.print(); } catch(e) { console.log(e); }
-    }, 1000);
-    
-    // Auto close after 15 seconds
-    setTimeout(() => {
-        try { printWindow.close(); } catch(e) { console.log(e); }
-    }, 15000);
+    const html = '<!DOCTYPE html><html><head><title>Receipt</title><style>body{font-family:"Courier New",monospace;padding:20px;max-width:300px;margin:auto}.header{text-align:center;margin-bottom:15px}.header h2{margin:0;font-size:18px}.header p{margin:2px 0;font-size:12px}hr{border:none;border-top:1px dashed #000;margin:10px 0}table{width:100%;font-size:12px;border-collapse:collapse}td{padding:3px 0}.total-row{font-weight:bold;font-size:14px}.footer{text-align:center;margin-top:15px;font-size:11px}.close-btn{display:block;margin:20px auto;padding:10px 20px;background:#8b4513;color:white;border:none;border-radius:5px;cursor:pointer}@media print{.close-btn{display:none}}</style></head><body><div class="header"><h2>' + (businessSettings ? businessSettings.business_name : '') + '</h2>' + (businessSettings && businessSettings.business_po_box ? '<p>' + businessSettings.business_po_box + '</p>' : '') + (businessSettings && businessSettings.business_location ? '<p>' + businessSettings.business_location + '</p>' : '') + (businessSettings && businessSettings.business_phone ? '<p>Tel: ' + businessSettings.business_phone + '</p>' : '') + '</div><hr><p style="font-size:12px">Receipt: ' + sale.receipt_no + '</p><p style="font-size:12px">Date: ' + new Date(sale.created_at).toLocaleString() + '</p><hr><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:center">Tax</th><th style="text-align:right">Amount</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><hr><table><tr><td>Subtotal:</td><td style="text-align:right">' + sale.subtotal.toFixed(2) + '</td></tr><tr><td>Tax (incl.):</td><td style="text-align:right">' + sale.tax_amount.toFixed(2) + '</td></tr><tr class="total-row"><td>TOTAL:</td><td style="text-align:right">KSh ' + sale.total_amount.toFixed(2) + '</td></tr></table><hr><p style="font-size:12px">Payment: ' + sale.payment_method.toUpperCase() + '</p><div class="footer"><p>' + (businessSettings ? businessSettings.receipt_footer : '') + '</p><hr><p style="font-size:9px">A = Taxable | B = Non-Taxable</p></div><button class="close-btn" onclick="window.close()">Close</button></body></html>';
+    const pw = window.open('', 'Receipt', 'width=400,height=600');
+    pw.document.write(html); pw.document.close();
+    setTimeout(() => { try { pw.print(); } catch(e) {} }, 1000);
+    setTimeout(() => { try { pw.close(); } catch(e) {} }, 15000);
 }
 
-// ============ DASHBOARD ============
 async function loadDashboard() {
     try {
         const data = await apiCall('/sales/today');
         document.getElementById('todaySales').textContent = data.count;
         document.getElementById('todayRevenue').textContent = 'KSh ' + data.total_amount.toFixed(2);
-        
         const tbody = document.getElementById('todaySalesTableBody');
-        if (tbody && data.sales) {
-            tbody.innerHTML = data.sales.map(s => 
-                '<tr><td>' + s.receipt_no + '</td><td>' + s.created_at + '</td><td>' + s.cashier + '</td><td>' + s.payment_method.toUpperCase() + '</td><td>KSh ' + s.total_amount.toFixed(2) + '</td></tr>'
-            ).join('') || '<tr><td colspan="5" style="text-align:center;">No sales yet today</td></tr>';
-        }
+        if (tbody && data.sales) { tbody.innerHTML = data.sales.map(s => '<tr><td>' + s.receipt_no + '</td><td>' + s.created_at + '</td><td>' + s.cashier + '</td><td>' + s.payment_method.toUpperCase() + '</td><td>KSh ' + s.total_amount.toFixed(2) + '</td></tr>').join('') || '<tr><td colspan="5">No sales</td></tr>'; }
     } catch (e) { console.error(e); }
 }
 
-// ============ REPORTS ============
-async function loadAllSales() {
+async function loadReceiptHistory() {
     try {
-        const sales = await apiCall('/sales/all');
-        const tbody = document.getElementById('allSalesTableBody');
+        const receipts = await apiCall('/sales/history');
+        const user = authManager.getUser();
+        const isAdminManager = user && (user.role === 'admin' || user.role === 'manager');
+        const tbody = document.getElementById('receiptHistoryBody');
         if (tbody) {
-            tbody.innerHTML = sales.map(s => 
-                '<tr><td>' + s.receipt_no + '</td><td>' + s.created_at + '</td><td>' + s.cashier + '</td><td>KSh ' + s.subtotal.toFixed(2) + '</td><td>KSh ' + s.tax_amount.toFixed(2) + '</td><td>KSh ' + s.total_amount.toFixed(2) + '</td></tr>'
-            ).join('') || '<tr><td colspan="6" style="text-align:center;">No sales yet</td></tr>';
+            tbody.innerHTML = receipts.map((r, index) => {
+                let btn = '';
+                if (isAdminManager) { btn = '<button onclick="reprintReceipt(\'' + r.receipt_no + '\')" style="padding:5px 10px;font-size:12px">Reprint</button>'; }
+                else { btn = index === 0 ? '<button onclick="reprintLastReceiptOnly()" style="padding:5px 10px;font-size:12px">Reprint</button>' : '<span style="color:#999;font-size:11px">View only</span>'; }
+                return '<tr><td>' + r.receipt_no + '</td><td>' + r.created_at + '</td><td>' + r.cashier + '</td><td>' + r.items.length + '</td><td>KSh ' + r.total_amount.toFixed(2) + '</td><td>' + btn + '</td></tr>';
+            }).join('') || '<tr><td colspan="6">No receipts</td></tr>';
         }
     } catch (e) { alert(e.message); }
 }
 
-async function loadLowStock() {
+async function reprintLastReceiptOnly() {
     try {
-        const products = await apiCall('/reports/low-stock');
-        document.getElementById('lowStockList').innerHTML = products.map(p => 
-            '<div style="padding: 10px; background: #fff3cd; margin-bottom: 5px; border-radius: 5px;"><strong>' + p.name + '</strong> - Stock: ' + p.stock + '</div>'
-        ).join('') || '<p>No low stock items</p>';
+        const receipt = await apiCall('/sales/last-receipt');
+        if (!receipt || receipt.message) { alert('No receipt available.'); return; }
+        let settings = businessSettings;
+        if (!settings) { try { settings = await apiCall('/settings'); } catch (e) { settings = {}; } }
+        let itemsHtml = '';
+        receipt.items.forEach(item => {
+            const taxLabel = (item.tax_rate || 0) > 0 ? 'A' : 'B';
+            itemsHtml += '<tr><td>' + item.name + '</td><td style="text-align:center">' + item.quantity + '</td><td style="text-align:center;font-weight:bold">' + taxLabel + '</td><td style="text-align:right">' + item.total_price.toFixed(2) + '</td></tr>';
+        });
+        const html = '<!DOCTYPE html><html><head><title>Reprint</title><style>body{font-family:"Courier New",monospace;padding:20px;max-width:300px;margin:auto}.h{text-align:center;margin-bottom:10px}.h h2{margin:0;font-size:16px}.h p{margin:2px 0;font-size:11px}.stamp{text-align:center;background:#fff3cd;border:2px solid #ffc107;padding:8px;margin:10px 0}.stamp strong{color:#d32f2f;font-size:13px}hr{border:none;border-top:1px dashed #000;margin:10px 0}table{width:100%;font-size:12px;border-collapse:collapse}td{padding:3px 0}.tr{font-weight:bold;font-size:14px}.cb{display:block;margin:20px auto;padding:10px 20px;background:#8b4513;color:white;border:none;border-radius:5px;cursor:pointer}@media print{.cb{display:none}}</style></head><body><div class="h"><h2>' + (settings.business_name || 'Folksmed Supppliers') + '</h2>' + (settings.business_po_box ? '<p>' + settings.business_po_box + '</p>' : '') + (settings.business_location ? '<p>' + settings.business_location + '</p>' : '') + (settings.business_phone ? '<p>Tel: ' + settings.business_phone + '</p>' : '') + '</div><hr><div class="stamp"><strong>*** REPRINTED COPY ***</strong></div><hr><p style="font-size:12px">Receipt: ' + receipt.receipt_no + '</p><p style="font-size:12px">Date: ' + receipt.created_at + '</p><hr><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:center">Tax</th><th style="text-align:right">Amount</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><hr><table><tr><td>Subtotal:</td><td style="text-align:right">' + receipt.subtotal.toFixed(2) + '</td></tr><tr><td>Tax (incl.):</td><td style="text-align:right">' + receipt.tax_amount.toFixed(2) + '</td></tr><tr class="tr"><td>TOTAL:</td><td style="text-align:right">KSh ' + receipt.total_amount.toFixed(2) + '</td></tr></table><hr><p style="font-size:12px">Payment: ' + receipt.payment_method.toUpperCase() + '</p><hr><p style="font-size:9px">A = Taxable | B = Non-Taxable</p><button class="cb" onclick="window.close()">Close</button></body></html>';
+        const pw = window.open('', 'Reprint', 'width=400,height=600');
+        pw.document.write(html); pw.document.close();
+        setTimeout(() => { try { pw.print(); } catch(e) {} }, 1000);
+        setTimeout(() => { try { pw.close(); } catch(e) {} }, 15000);
+    } catch (e) { alert(e.message); }
+}
+
+function openPOModal() { loadProductsForPO(); openModal('poModal'); }
+
+async function loadProductsForPO() {
+    try {
+        const list = await apiCall('/products');
+        const select = document.getElementById('poProductId');
+        if (select) { select.innerHTML = '<option value="">Select Product...</option>' + list.map(p => '<option value="' + p.id + '">' + p.name + ' (' + (p.unit || 'N/A') + ')</option>').join(''); }
     } catch (e) { console.error(e); }
 }
 
-// ============ SETTINGS ============
+async function loadPurchaseOrders() {
+    try {
+        const pos = await apiCall('/purchase-orders');
+        const tbody = document.getElementById('poTableBody');
+        if (tbody) { tbody.innerHTML = pos.map(po => '<tr><td>' + po.id + '</td><td>' + po.supplier + '</td><td>' + po.product_name + '</td><td>' + (po.unit || '-') + '</td><td>' + po.quantity + '</td><td>KSh ' + po.unit_cost + '</td><td>KSh ' + po.total_cost + '</td><td>' + po.status.toUpperCase() + '</td><td>' + (po.status === 'pending' ? '<button onclick="updatePOStatus(' + po.id + ',\'received\')" style="padding:5px 10px;font-size:12px">Receive</button>' : '-') + '</td></tr>').join('') || '<tr><td colspan="9">No POs</td></tr>'; }
+    } catch (e) { alert(e.message); }
+}
+
+async function updatePOStatus(poId, status) {
+    try { await apiCall('/purchase-orders/' + poId + '/status?status=' + status, 'PUT'); alert('PO updated!'); loadPurchaseOrders(); loadProducts(); } catch (e) { alert(e.message); }
+}
+
+async function loadDailyClose() {
+    try {
+        const data = await apiCall('/sales/daily-close');
+        document.getElementById('dailyCloseDate').textContent = data.date;
+        document.getElementById('dailyCloseTransactions').textContent = data.total_transactions;
+        const tbody = document.getElementById('dailyCloseTableBody');
+        if (tbody) { tbody.innerHTML = '<tr><td>Cash</td><td style="text-align:right">KSh ' + data.cash_total.toFixed(2) + '</td></tr><tr><td>M-Pesa</td><td style="text-align:right">KSh ' + data.mpesa_total.toFixed(2) + '</td></tr><tr><td>Card</td><td style="text-align:right">KSh ' + data.card_total.toFixed(2) + '</td></tr><tr style="font-weight:bold"><td>TOTAL</td><td style="text-align:right">KSh ' + data.grand_total.toFixed(2) + '</td></tr>'; }
+    } catch (e) { console.error(e); }
+}
+
+async function loadProfitReport() {
+    try {
+        const data = await apiCall('/reports/profit');
+        const tbody = document.getElementById('profitTableBody');
+        if (tbody) { tbody.innerHTML = data.map(p => '<tr><td>' + p.product + '</td><td>KSh ' + p.selling_price + '</td><td>' + p.tax_rate + '%</td><td>KSh ' + p.net_selling + '</td><td>KSh ' + (p.cost || 0) + '</td><td>KSh ' + p.gross_profit + '</td><td>' + p.profit_margin + '%</td></tr>').join('') || '<tr><td colspan="7">No cost data</td></tr>'; }
+    } catch (e) { console.error(e); }
+}
+
+async function loadAllSales() {
+    try {
+        const sales = await apiCall('/sales/all');
+        const tbody = document.getElementById('allSalesTableBody');
+        if (tbody) { tbody.innerHTML = sales.map(s => '<tr><td>' + s.receipt_no + '</td><td>' + s.created_at + '</td><td>' + s.cashier + '</td><td>KSh ' + s.total_amount.toFixed(2) + '</td></tr>').join('') || '<tr><td colspan="4">No sales</td></tr>'; }
+    } catch (e) { console.error(e); }
+}
+
+async function loadLowStock() {
+    try {
+        const items = await apiCall('/reports/low-stock');
+        document.getElementById('lowStockList').innerHTML = items.map(p => '<div style="padding:10px;background:#fff3cd;margin-bottom:5px;border-radius:5px"><strong>' + p.name + '</strong> - Stock: ' + p.stock + '</div>').join('') || '<p>No low stock</p>';
+    } catch (e) { console.error(e); }
+}
+
 async function loadSettings() {
     try {
         const settings = await apiCall('/settings');
@@ -497,498 +320,81 @@ async function loadSettings() {
 
 async function updateBusinessInfo() {
     try {
-        await apiCall('/settings/business', 'PUT', {
-            business_name: document.getElementById('businessName').value,
-            business_po_box: document.getElementById('businessPoBox').value,
-            business_location: document.getElementById('businessLocation').value,
-            business_phone: document.getElementById('businessPhone').value,
-            business_tax_pin: document.getElementById('businessTaxPin').value,
-            receipt_footer: document.getElementById('receiptFooter').value
-        });
-        alert('Business info saved!');
+        await apiCall('/settings/business', 'PUT', { business_name: document.getElementById('businessName').value, business_po_box: document.getElementById('businessPoBox').value, business_location: document.getElementById('businessLocation').value, business_phone: document.getElementById('businessPhone').value, business_tax_pin: document.getElementById('businessTaxPin').value, receipt_footer: document.getElementById('receiptFooter').value });
+        alert('Saved!');
     } catch (e) { alert(e.message); }
 }
 
 async function updateTaxRate() {
-    const rate = parseFloat(document.getElementById('defaultTaxRate').value);
-    try {
-        await apiCall('/settings/tax-rate?rate=' + rate, 'PUT');
-        alert('Tax rate updated to ' + rate + '%');
-    } catch (e) { alert(e.message); }
+    try { await apiCall('/settings/tax-rate?rate=' + document.getElementById('defaultTaxRate').value, 'PUT'); alert('Tax rate updated!'); } catch (e) { alert(e.message); }
 }
 
-// ============ BACKUP ============
-async function createBackup() {
-    try {
-        await apiCall('/backup/create', 'POST');
-        alert('Backup created!');
-        loadBackups();
-    } catch (e) { alert(e.message); }
+async function loadBusinessSettings() {
+    try { businessSettings = await apiCall('/settings'); } catch (e) { businessSettings = null; }
 }
 
-async function loadBackups() {
+async function loadMpesaSettings() {
     try {
-        const backups = await apiCall('/backup/list');
-        document.getElementById('backupsTableBody').innerHTML = backups.map(b => 
-            '<tr><td>' + b.filename + '</td><td>' + (b.size / 1024).toFixed(2) + ' KB</td><td>' + b.created + '</td><td><button onclick="deleteBackup(\'' + b.filename + '\')" style="color: red;">Delete</button></td></tr>'
-        ).join('') || '<tr><td colspan="4" style="text-align:center;">No backups</td></tr>';
+        const settings = await apiCall('/settings');
+        document.getElementById('mpesaEnabled').checked = settings.mpesa_enabled === 'true';
+        document.getElementById('mpesaConsumerKey').value = settings.mpesa_consumer_key || '';
+        document.getElementById('mpesaConsumerSecret').value = settings.mpesa_consumer_secret || '';
+        document.getElementById('mpesaPasskey').value = settings.mpesa_passkey || '';
+        document.getElementById('mpesaShortcode').value = settings.mpesa_shortcode || '';
     } catch (e) { console.error(e); }
 }
 
-async function deleteBackup(filename) {
-    const firstName = prompt('Type DELETE to permanently remove backup: ' + filename);
-    if (firstName !== 'DELETE') {
-        alert('Backup deletion cancelled.');
-        return;
-    }
-    const secondConfirm = confirm('This backup will be permanently deleted. Continue?');
-    if (!secondConfirm) return;
-    
+async function saveMpesaSettings() {
     try {
-        await apiCall('/backup/' + filename, 'DELETE');
-        alert('Backup deleted.');
-        loadBackups();
+        await apiCall('/settings/business', 'PUT', { mpesa_enabled: document.getElementById('mpesaEnabled').checked ? 'true' : 'false', mpesa_consumer_key: document.getElementById('mpesaConsumerKey').value, mpesa_consumer_secret: document.getElementById('mpesaConsumerSecret').value, mpesa_passkey: document.getElementById('mpesaPasskey').value, mpesa_shortcode: document.getElementById('mpesaShortcode').value });
+        alert('M-Pesa settings saved!');
     } catch (e) { alert(e.message); }
 }
 
-// ============ EVENT LISTENERS ============
-document.getElementById('discountInput').addEventListener('input', (e) => {
-    discount = parseFloat(e.target.value) || 0;
-    updateCart();
-});
-
-document.getElementById('searchProduct').addEventListener('input', (e) => {
-    const term = e.target.value.toLowerCase();
-    renderPOSProducts(products.filter(p => p.name.toLowerCase().includes(term)));
-});
-
-document.getElementById('posCategoryFilter').addEventListener('change', (e) => {
-    const catId = e.target.value;
-    if (catId === 'all') renderPOSProducts(products);
-    else renderPOSProducts(products.filter(p => p.category_id == catId));
-});
-
-
-
-// ============ BARCODE SCANNER ============
-document.getElementById('barcodeInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        const barcode = e.target.value.trim();
-        
-        if (barcode) {
-            // Find product by barcode
-            const product = products.find(p => p.barcode === barcode);
-            
-            if (product) {
-                addToCart(product.id);
-                e.target.value = ''; // Clear for next scan
-            } else {
-                // Try to find by ID if no barcode match
-                const productById = products.find(p => p.id == barcode);
-                if (productById) {
-                    addToCart(productById.id);
-                    e.target.value = '';
-                } else {
-                    alert('Product not found for barcode: ' + barcode);
-                    e.target.value = '';
-                }
-            }
-        }
-    }
-});
-
-// Keep focus on barcode input
-document.addEventListener('click', () => {
-    const barcodeInput = document.getElementById('barcodeInput');
-    if (barcodeInput && document.getElementById('pos').style.display !== 'none') {
-        barcodeInput.focus();
-    }
-});
-
-
-
-// ============ SCANNER TEST ============
-document.getElementById('scannerTest').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        const barcode = e.target.value.trim();
-        if (barcode) {
-            const product = products.find(p => p.barcode === barcode);
-            const resultDiv = document.getElementById('scannerResult');
-            
-            if (product) {
-                resultDiv.innerHTML = '<div style="background: #d4edda; padding: 10px; border-radius: 5px; color: #2e7d32;"><strong>SCANNER WORKING!</strong><br>Product found: ' + product.name + '<br>Price: KSh ' + product.price + '</div>';
-            } else {
-                resultDiv.innerHTML = '<div style="background: #fff3cd; padding: 10px; border-radius: 5px; color: #856404;"><strong>Scanner detected input:</strong> ' + barcode + '<br>No product found with this barcode yet. Add it in Products tab.</div>';
-            }
-            e.target.value = '';
-        }
-    }
-});
-
-// Also test scanner on login page (any input field)
-document.addEventListener('keydown', (e) => {
-    // If scanner types quickly (less than 50ms between characters), it's a scanner
-    if (e.target && e.target.tagName === 'INPUT' && e.target.id !== 'scannerTest') {
-        const now = Date.now();
-        if (!window.lastKeyTime) window.lastKeyTime = now;
-        const timeDiff = now - window.lastKeyTime;
-        window.lastKeyTime = now;
-        
-        if (timeDiff < 50 && e.key !== 'Enter' && e.key.length === 1) {
-            // This is likely a scanner (fast input)
-            console.log('Scanner detected on field:', e.target.id);
-        }
-    }
-});
-
-
-
-// ============ EXPORT TO CSV ============
-async function exportSalesCSV() {
-    try {
-        const sales = await apiCall('/sales/all');
-        
-        if (sales.length === 0) {
-            alert('No sales data to export.');
-            return;
-        }
-        
-        // CSV header
-        let csv = 'Receipt No,Date/Time,Cashier,Subtotal,Tax,Discount,Total,Payment Method\n';
-        
-        // Add rows
-        sales.forEach(s => {
-            csv += s.receipt_no + ',' + s.created_at + ',' + s.cashier + ',' + 
-                   s.subtotal + ',' + s.tax_amount + ',' + s.discount + ',' + 
-                   s.total_amount + ',' + s.payment_method + '\n';
-        });
-        
-        // Download
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'sales_report_' + new Date().toISOString().split('T')[0] + '.csv';
-        a.click();
-        window.URL.revokeObjectURL(url);
-        
-    } catch (e) { alert(e.message); }
-}
-
-async function exportProductsCSV() {
-    try {
-        const products = await apiCall('/products');
-        
-        if (products.length === 0) {
-            alert('No products to export.');
-            return;
-        }
-        
-        let csv = 'ID,Name,Unit,Price,Stock,Tax Rate\n';
-        products.forEach(p => {
-            csv += p.id + ',' + p.name + ',' + (p.unit || '') + ',' + p.price + ',' + p.stock + ',' + (p.tax_rate || 16) + '\n';
-        });
-        
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'products_report_' + new Date().toISOString().split('T')[0] + '.csv';
-        a.click();
-        window.URL.revokeObjectURL(url);
-        
-    } catch (e) { alert(e.message); }
-}
-
-
-
-// ============ DAILY CLOSE REPORT ============
-async function loadDailyClose() {
-    try {
-        const data = await apiCall('/sales/daily-close');
-        const tbody = document.getElementById('dailyCloseTableBody');
-        if (tbody) {
-            tbody.innerHTML = 
-                '<tr><td>Cash</td><td style="text-align:right;">KSh ' + data.cash_total.toFixed(2) + '</td></tr>' +
-                '<tr><td>M-Pesa</td><td style="text-align:right;">KSh ' + data.mpesa_total.toFixed(2) + '</td></tr>' +
-                '<tr><td>Card</td><td style="text-align:right;">KSh ' + data.card_total.toFixed(2) + '</td></tr>' +
-                '<tr><td>Credit</td><td style="text-align:right;">KSh ' + data.credit_total.toFixed(2) + '</td></tr>' +
-                '<tr style="font-weight: bold; border-top: 2px solid #8b4513;"><td>TOTAL</td><td style="text-align:right;">KSh ' + data.grand_total.toFixed(2) + '</td></tr>';
-        }
-        document.getElementById('dailyCloseDate').textContent = data.date;
-        document.getElementById('dailyCloseTransactions').textContent = data.total_transactions;
-    } catch (e) { console.error(e); }
-}
-
-// ============ STOCK ADJUSTMENT ============
 function openStockModal(productId) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
-    
     document.getElementById('stockProductId').value = product.id;
     document.getElementById('stockProductName').textContent = product.name;
     document.getElementById('stockCurrent').textContent = product.stock;
     document.getElementById('stockAdjustment').value = '';
     document.getElementById('stockReason').value = '';
-    document.getElementById('stockModal').classList.add('active');
+    openModal('stockModal');
 }
 
-document.getElementById('stockForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const productId = document.getElementById('stockProductId').value;
-    const adjustment = parseInt(document.getElementById('stockAdjustment').value);
-    const reason = document.getElementById('stockReason').value || 'manual';
-    
+async function createBackup() { try { await apiCall('/backup/create', 'POST'); alert('Backup created!'); loadBackups(); } catch (e) { alert(e.message); } }
+
+async function loadBackups() {
     try {
-        await apiCall('/products/' + productId + '/stock?adjustment=' + adjustment + '&reason=' + reason, 'PUT');
-        closeModal('stockModal');
-        alert('Stock adjusted successfully!');
-        loadProducts();
-    } catch (e) { alert(e.message); }
-});
-
-// ============ RECEIPT REPRINT ============
-async function reprintLastReceipt() {
-    try {
-        const sales = await apiCall('/sales/all');
-        if (sales.length === 0) {
-            alert('No sales found to reprint.');
-            return;
-        }
-        const lastSale = sales[0];
-        
-        // Build simple receipt for reprint
-        const receiptHtml = '<!DOCTYPE html><html><head><title>Reprint ' + lastSale.receipt_no + '</title>' +
-            '<style>body{font-family:"Courier New",monospace;padding:20px;max-width:300px;margin:auto}' +
-            '.header{text-align:center;margin-bottom:15px}hr{border:none;border-top:1px dashed #000;margin:10px 0}' +
-            'table{width:100%;font-size:12px;border-collapse:collapse}td{padding:3px 0}' +
-            '.total-row{font-weight:bold;font-size:14px}</style></head><body>' +
-            '<div class="header"><h2>REPRINT</h2><p>' + (businessSettings ? businessSettings.business_name : '') + '</p></div>' +
-            '<hr><p>Receipt: ' + lastSale.receipt_no + '</p>' +
-            '<p>Date: ' + lastSale.created_at + '</p><hr>' +
-            '<table>' +
-            '<tr><td>Subtotal:</td><td style="text-align:right;">' + lastSale.subtotal.toFixed(2) + '</td></tr>' +
-            '<tr><td>Tax:</td><td style="text-align:right;">' + lastSale.tax_amount.toFixed(2) + '</td></tr>' +
-            '<tr class="total-row"><td>TOTAL:</td><td style="text-align:right;">KSh ' + lastSale.total_amount.toFixed(2) + '</td></tr>' +
-            '</table><hr>' +
-            '<p>Payment: ' + lastSale.payment_method.toUpperCase() + '</p>' +
-            '<p style="text-align:center;margin-top:20px;font-size:10px;color:#666;">Safari POS - (c) Safari Softwares</p>' +
-            '</body></html>';
-        
-        const printWindow = window.open('', 'Reprint', 'width=400,height=600');
-        printWindow.document.write(receiptHtml);
-        printWindow.document.close();
-        setTimeout(() => { try { printWindow.print(); } catch(e) {} }, 1000);
-        setTimeout(() => { try { printWindow.close(); } catch(e) {} }, 15000);
-        
-    } catch (e) { alert(e.message); }
-}
-
-// ============ PROFIT REPORT ============
-async function loadProfitReport() {
-    try {
-        const profitData = await apiCall('/reports/profit');
-        const tbody = document.getElementById('profitTableBody');
-        if (tbody) {
-            tbody.innerHTML = profitData.map(p => 
-                '<tr><td>' + p.product + '</td>' +
-                '<td>KSh ' + p.selling_price + '</td>' +
-                '<td>' + p.tax_rate + '%</td>' +
-                '<td>KSh ' + p.net_selling + '</td>' +
-                '<td>KSh ' + p.cost + '</td>' +
-                '<td style="color: ' + (p.gross_profit >= 0 ? '#2e7d32' : '#d32f2f') + ';">KSh ' + p.gross_profit + '</td>' +
-                '<td>' + p.profit_margin + '%</td></tr>'
-            ).join('') || '<tr><td colspan="7" style="text-align:center;">No products with cost price set</td></tr>';
-        }
-    } catch (e) { alert(e.message); }
-}
-
-
-
-// ============ RECEIPT HISTORY ============
-async function loadReceiptHistory() {
-    try {
-        const receipts = await apiCall('/sales/history');
-        const tbody = document.getElementById('receiptHistoryBody');
-        if (tbody) {
-            tbody.innerHTML = receipts.map(r => 
-                '<tr><td>' + r.receipt_no + '</td><td>' + r.created_at + '</td><td>' + r.cashier + '</td>' +
-                '<td>' + r.items.length + ' items</td><td>KSh ' + r.total_amount.toFixed(2) + '</td>' +
-                '<td><button class="btn btn-secondary" onclick="reprintReceipt(\'' + r.receipt_no + '\')" style="padding: 5px 10px; font-size: 12px;">Reprint</button></td></tr>'
-            ).join('') || '<tr><td colspan="6" style="text-align:center;">No receipts found</td></tr>';
-        }
-    } catch (e) { alert(e.message); }
-}
-
-async function reprintReceipt(receiptNo) {
-    try {
-        const receipts = await apiCall('/sales/history');
-        const receipt = receipts.find(r => r.receipt_no === receiptNo);
-        if (!receipt) { alert('Receipt not found'); return; }
-        
-        let itemsHtml = '';
-        receipt.items.forEach(item => {
-            itemsHtml += '<tr><td>' + item.name + '</td><td style="text-align:center;">' + item.quantity + '</td><td style="text-align:right;">' + item.total_price.toFixed(2) + '</td></tr>';
-        });
-        
-        const receiptHtml = '<!DOCTYPE html><html><head><title>Reprint ' + receipt.receipt_no + '</title>' +
-            '<style>body{font-family:"Courier New",monospace;padding:20px;max-width:300px;margin:auto}' +
-            '.header{text-align:center;margin-bottom:15px}hr{border:none;border-top:1px dashed #000;margin:10px 0}' +
-            'table{width:100%;font-size:12px;border-collapse:collapse}td{padding:3px 0}' +
-            '.total-row{font-weight:bold;font-size:14px}' +
-            '.close-btn{display:block;margin:20px auto;padding:10px 20px;background:#8b4513;color:white;border:none;border-radius:5px;cursor:pointer}' +
-            '@media print{.close-btn{display:none}}</style></head><body>' +
-            '<div class="header"><h2>REPRINT</h2><p>' + (businessSettings ? businessSettings.business_name : '') + '</p></div>' +
-            '<hr><p>Receipt: ' + receipt.receipt_no + '</p><p>Date: ' + receipt.created_at + '</p><hr>' +
-            '<table><thead><tr><th>Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Amount</th></tr></thead>' +
-            '<tbody>' + itemsHtml + '</tbody></table><hr>' +
-            '<table>' +
-            '<tr><td>Subtotal:</td><td style="text-align:right;">' + receipt.subtotal.toFixed(2) + '</td></tr>' +
-            '<tr><td>Tax:</td><td style="text-align:right;">' + receipt.tax_amount.toFixed(2) + '</td></tr>' +
-            '<tr class="total-row"><td>TOTAL:</td><td style="text-align:right;">KSh ' + receipt.total_amount.toFixed(2) + '</td></tr>' +
-            '</table><hr><p>Payment: ' + receipt.payment_method.toUpperCase() + '</p>' +
-            '<button class="close-btn" onclick="window.close()">Close</button>' +
-            '</body></html>';
-        
-        const pw = window.open('', 'Reprint', 'width=400,height=600');
-        pw.document.write(receiptHtml);
-        pw.document.close();
-        setTimeout(() => { try { pw.print(); } catch(e) {} }, 1000);
-        setTimeout(() => { try { pw.close(); } catch(e) {} }, 15000);
-        
-    } catch (e) { alert(e.message); }
-}
-
-// ============ PURCHASE ORDERS ============
-
-
-// ============ PURCHASE ORDERS - DROPDOWN ============
-async function loadProductsForPO() {
-    try {
-        const productList = await apiCall('/products');
-        const select = document.getElementById('poProductId');
-        if (select) {
-            select.innerHTML = '<option value="">Select Product...</option>' + 
-                productList.map(p => 
-                    '<option value="' + p.id + '">' + p.name + ' (' + p.unit + ') - Stock: ' + p.stock + '</option>'
-                ).join('');
-        }
+        const backups = await apiCall('/backup/list');
+        const tbody = document.getElementById('backupsTableBody');
+        if (tbody) { tbody.innerHTML = backups.map(b => '<tr><td>' + b.filename + '</td><td>' + (b.size / 1024).toFixed(2) + ' KB</td><td>' + b.created + '</td><td><button onclick="deleteBackup(\'' + b.filename + '\')" style="color:red">Delete</button></td></tr>').join('') || '<tr><td colspan="4">No backups</td></tr>'; }
     } catch (e) { console.error(e); }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const poSelect = document.getElementById('poProductId');
-    if (poSelect) {
-        poSelect.addEventListener('change', async () => {
-            const productId = poSelect.value;
-            const detailsDiv = document.getElementById('poProductDetails');
-            
-            if (!productId) {
-                detailsDiv.innerHTML = 'No product selected';
-                return;
+async function deleteBackup(filename) { if (!confirm('Delete backup?')) return; try { await apiCall('/backup/' + filename, 'DELETE'); loadBackups(); } catch (e) { alert(e.message); } }
+
+document.getElementById('discountInput').addEventListener('input', (e) => { discount = parseFloat(e.target.value) || 0; updateCart(); });
+document.getElementById('searchProduct').addEventListener('input', (e) => { renderPOSProducts(products.filter(p => p.name.toLowerCase().includes(e.target.value.toLowerCase()))); });
+document.getElementById('posCategoryFilter').addEventListener('change', (e) => { const catId = e.target.value; if (catId === 'all') renderPOSProducts(products); else renderPOSProducts(products.filter(p => p.category_id == catId)); });
+document.getElementById('categoryForm').addEventListener('submit', async (e) => { e.preventDefault(); try { await apiCall('/products/categories', 'POST', { name: document.getElementById('categoryName').value, description: document.getElementById('categoryDescription').value || null }); closeModal('categoryModal'); e.target.reset(); alert('Category added!'); loadCategories(); } catch (e) { alert(e.message); } });
+document.getElementById('productForm').addEventListener('submit', async (e) => { e.preventDefault(); try { await apiCall('/products', 'POST', { name: document.getElementById('productName').value, unit: document.getElementById('productUnit').value || null, category_id: document.getElementById('productCategory').value ? parseInt(document.getElementById('productCategory').value) : null, price: parseFloat(document.getElementById('productPrice').value), cost: parseFloat(document.getElementById('productCost').value) || null, tax_rate: parseFloat(document.getElementById('productTaxRate').value) || 0, stock: parseInt(document.getElementById('productStock').value) }); closeModal('productModal'); e.target.reset(); alert('Product added!'); loadProducts(); } catch (e) { alert(e.message); } });
+document.getElementById('editProductForm').addEventListener('submit', async (e) => { e.preventDefault(); const productId = document.getElementById('editProductId').value; try { await apiCall('/products/' + productId, 'PUT', { name: document.getElementById('editProductName').value, unit: document.getElementById('editProductUnit').value || null, price: parseFloat(document.getElementById('editProductPrice').value), tax_rate: parseFloat(document.getElementById('editProductTaxRate').value), stock: parseInt(document.getElementById('editProductStock').value) }); closeModal('editProductModal'); alert('Product updated!'); loadProducts(); } catch (e) { alert(e.message); } });
+document.getElementById('userForm').addEventListener('submit', async (e) => { e.preventDefault(); try { await apiCall('/users', 'POST', { name: document.getElementById('userNameInput').value, email: document.getElementById('userEmail').value, password: document.getElementById('userPassword').value, role: document.getElementById('userRoleSelect').value }); closeModal('userModal'); e.target.reset(); alert('User added!'); loadUsers(); } catch (e) { alert(e.message); } });
+document.getElementById('stockForm').addEventListener('submit', async (e) => { e.preventDefault(); const productId = document.getElementById('stockProductId').value; const adjustment = parseInt(document.getElementById('stockAdjustment').value); const reason = document.getElementById('stockReason').value || 'manual'; try { await apiCall('/products/' + productId + '/stock?adjustment=' + adjustment + '&reason=' + reason, 'PUT'); closeModal('stockModal'); alert('Stock adjusted!'); loadProducts(); } catch (e) { alert(e.message); } });
+document.getElementById('poForm').addEventListener('submit', async (e) => { e.preventDefault(); try { await apiCall('/purchase-orders', 'POST', { supplier: document.getElementById('poSupplier').value, product_id: parseInt(document.getElementById('poProductId').value), quantity: parseInt(document.getElementById('poQuantity').value), unit_cost: parseFloat(document.getElementById('poUnitCost').value) }); closeModal('poModal'); e.target.reset(); alert('PO created!'); loadPurchaseOrders(); } catch (e) { alert(e.message); } });
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const user = authManager.getUser();
+    if (user && user.role === 'cashier') {
+        document.querySelectorAll('.sidebar-menu a').forEach(a => {
+            const t = a.textContent.trim();
+            if (['Products','Categories','Users','Reports','Purchase Orders','Backup','Settings'].includes(t)) {
+                a.style.display = 'none';
             }
-            
-            try {
-                const productList = await apiCall('/products');
-                const product = productList.find(p => p.id == productId);
-                
-                if (product) {
-                    detailsDiv.innerHTML = 
-                        '<strong>' + product.name + '</strong><br>' +
-                        'Unit: ' + (product.unit || 'N/A') + '<br>' +
-                        'Current Stock: ' + product.stock + '<br>' +
-                        'Current Cost: KSh ' + (product.cost || 'Not set') + '<br>' +
-                        'Selling Price: KSh ' + product.price;
-                }
-            } catch (e) { console.error(e); }
         });
     }
-});
-
-// Update openPOModal to load products
-function openPOModal() {
-    loadProductsForPO();
-    openModal('poModal');
-}
-
-
-document.getElementById('poForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-        await apiCall('/purchase-orders', 'POST', {
-            supplier: document.getElementById('poSupplier').value,
-            product_id: parseInt(document.getElementById('poProductId').value),
-            quantity: parseInt(document.getElementById('poQuantity').value),
-            unit_cost: parseFloat(document.getElementById('poUnitCost').value)
-        });
-        closeModal('poModal');
-        e.target.reset();
-        alert('Purchase Order created!');
-        loadPurchaseOrders();
-    } catch (e) { alert(e.message); }
-});
-
-async function loadPurchaseOrders() {
-    try {
-        const pos = await apiCall('/purchase-orders');
-        const tbody = document.getElementById('poTableBody');
-        if (tbody) {
-            tbody.innerHTML = pos.map(po => 
-                '<tr><td>' + po.id + '</td><td>' + po.supplier + '</td><td>' + po.product_name + '</td>' +
-                '<td>' + po.quantity + '</td><td>KSh ' + po.unit_cost + '</td><td>KSh ' + po.total_cost + '</td>' +
-                '<td>' + po.status.toUpperCase() + '</td>' +
-                '<td>' + (po.status === 'pending' ? 
-                    '<button class="btn btn-success" onclick="updatePOStatus(' + po.id + ', \'received\')" style="padding: 5px 10px; font-size: 12px;">Receive</button>' : 
-                    '-') + '</td></tr>'
-            ).join('') || '<tr><td colspan="8" style="text-align:center;">No purchase orders</td></tr>';
-        }
-    } catch (e) { alert(e.message); }
-}
-
-async function updatePOStatus(poId, status) {
-    try {
-        await apiCall('/purchase-orders/' + poId + '/status?status=' + status, 'PUT');
-        alert('PO marked as received! Stock updated.');
-        loadPurchaseOrders();
-        loadProducts();
-    } catch (e) { alert(e.message); }
-}
-
-// ============ INIT ============
-async function loadBusinessSettings() {
-    try {
-        businessSettings = await apiCall('/settings');
-        console.log('Business settings loaded:', businessSettings);
-    } catch (e) { 
-        console.error('Error loading settings:', e);
-        businessSettings = {
-            business_name: 'SAFARI POS',
-            business_po_box: '',
-            business_location: '',
-            business_phone: '',
-            business_tax_pin: '',
-            receipt_footer: 'Thank you! Karibu Tena!'
-        };
-    }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
     loadDashboard();
     loadCategoriesForSelect();
+    await loadBusinessSettings();
 });
-
-// ============ TOGGLE SECTIONS ============
-function toggleSection(sectionId) {
-    const section = document.getElementById(sectionId);
-    const icon = document.getElementById(sectionId + 'Icon');
-    
-    if (section.style.display === 'none' || section.style.display === '') {
-        section.style.display = 'block';
-        if (icon) icon.textContent = '-';
-    } else {
-        section.style.display = 'none';
-        if (icon) icon.textContent = '+';
-    }
-}

@@ -17,6 +17,16 @@
     box-sizing: border-box;
 }
 
+.view {
+    display: none;
+}
+
+.view.active {
+    display: block;
+}
+
+
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: var(--background);

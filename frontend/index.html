@@ -13,7 +13,7 @@
                 <h2>SAFARI POS</h2>
                 <p>The Force Behind the Future</p>
             </div>
-            <ul class="sidebar-menu">
+            <ul class="sidebar-menu" style="overflow-y: auto; max-height: calc(100vh - 150px);">
                 <li><a class="active" onclick="showView('dashboard')">Dashboard</a></li>
                 <li><a onclick="showView('pos')">New Sale</a></li>
                 <li><a onclick="showView('products')">Products</a></li>
@@ -24,7 +24,6 @@
                 <li><a onclick="showView('purchaseOrders')">Purchase Orders</a></li>
                 <li><a onclick="showView('backup')">Backup</a></li>
                 <li><a onclick="showView('settings')">Settings</a></li>
-                <li><a id="logoutBtn" style="color: #ff6b6b;">Logout</a></li>
             </ul>
         </div>
 
@@ -37,10 +36,11 @@
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <span id="userName" style="font-weight: bold;"></span>
                     <span id="userRole" style="background: #8b4513; color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px;"></span>
+                    <button id="logoutBtn" style="background: #d32f2f; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">Logout</button>
                 </div>
             </div>
 
-            <div id="dashboard" class="view">
+            <div id="dashboard" class="view active" style="display:block;">
                 <h2 style="margin-bottom: 20px;">Dashboard</h2>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
                     <div class="card">
@@ -56,15 +56,7 @@
                     <h3 class="card-title">Today's Transactions</h3>
                     <div class="data-table">
                         <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr>
-                                    <th>Receipt No</th>
-                                    <th>Time</th>
-                                    <th>Cashier</th>
-                                    <th>Payment</th>
-                                    <th>Total</th>
-                                </tr>
-                            </thead>
+                            <thead><tr><th>Receipt No</th><th>Time</th><th>Cashier</th><th>Payment</th><th>Total</th></tr></thead>
                             <tbody id="todaySalesTableBody"></tbody>
                         </table>
                     </div>
@@ -74,40 +66,21 @@
             <div id="pos" class="view" style="display:none;">
                 <div class="pos-container">
                     <div class="product-grid-container">
-                        <select id="posCategoryFilter" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #ecf0f1; border-radius: 8px;">
-                            <option value="all">All Categories</option>
-                        </select>
-                        <input type="text" id="barcodeInput" placeholder="Scan barcode here..." autofocus style="width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #d2691e; border-radius: 8px; font-size: 18px;">
-                        <input type="text" id="searchProduct" placeholder="Search products..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 2px solid #ecf0f1; border-radius: 8px;">
+                        <select id="posCategoryFilter" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #ecf0f1; border-radius: 8px;"><option value="all">All Categories</option></select>
+                        <input type="text" id="barcodeInput" placeholder="Scan barcode here..." style="width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 10px; border: 2px solid #d2691e; border-radius: 8px; font-size: 18px;">
+                        <input type="text" id="searchProduct" placeholder="Search products..." style="width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 15px; border: 2px solid #ecf0f1; border-radius: 8px;">
                         <div class="product-grid" id="productGrid"></div>
                     </div>
                     <div class="cart-container">
                         <h3 style="margin-bottom: 15px; color: #8b4513;">Current Sale</h3>
-                        <div class="cart-items" id="cartItems">
-                            <p style="color: #95a5a6; text-align: center; margin-top: 50px;">Cart is empty</p>
-                        </div>
+                        <div class="cart-items" id="cartItems"><p style="color: #95a5a6; text-align: center; margin-top: 50px;">Cart is empty</p></div>
                         <div>
-                            <div style="margin-bottom: 15px;">
-                                <label>Discount (%)</label>
-                                <input type="number" id="discountInput" value="0" style="width: 100%; padding: 10px; border: 2px solid #ecf0f1; border-radius: 8px;">
-                            </div>
+                            <div style="margin-bottom: 15px;"><label>Discount (%)</label><input type="number" id="discountInput" value="0" style="width: 100%; padding: 10px; border: 2px solid #ecf0f1; border-radius: 8px;"></div>
                             <div style="padding: 20px 0; border-top: 2px solid #ecf0f1;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                                    <span>Subtotal:</span>
-                                    <span id="subtotal">KSh 0.00</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                                    <span>Tax:</span>
-                                    <span id="tax">KSh 0.00</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                                    <span>Discount:</span>
-                                    <span id="discount">KSh 0.00</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: bold; color: #8b4513;">
-                                    <span>TOTAL:</span>
-                                    <span id="total">KSh 0.00</span>
-                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;"><span>Subtotal:</span><span id="subtotal">KSh 0.00</span></div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;"><span>Tax:</span><span id="tax">KSh 0.00</span></div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;"><span>Discount:</span><span id="discount">KSh 0.00</span></div>
+                                <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: bold; color: #8b4513;"><span>TOTAL:</span><span id="total">KSh 0.00</span></div>
                             </div>
                             <button class="btn btn-primary" onclick="checkout()" style="width: 100%; padding: 15px; font-size: 18px;">Checkout</button>
                         </div>
@@ -116,268 +89,74 @@
             </div>
 
             <div id="products" class="view" style="display:none;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                    <h2>Products</h2>
-                    <button class="btn btn-primary" onclick="openProductModal()" style="width: auto; padding: 10px 20px;">Add Product</button>
-                </div>
-                <div class="data-table">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Unit</th>
-                                <th>Category</th>
-                                <th>Price</th>
-                                <th>Tax</th>
-                                <th>Stock</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="productsTableBody"></tbody>
-                    </table>
-                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;"><h2>Products</h2><button class="btn btn-primary" onclick="openProductModal()" style="width: auto; padding: 10px 20px;">Add Product</button></div>
+                <div class="data-table"><table style="width: 100%; border-collapse: collapse;"><thead><tr><th>ID</th><th>Name</th><th>Unit</th><th>Category</th><th>Price</th><th>Tax</th><th>Stock</th><th>Actions</th></tr></thead><tbody id="productsTableBody"></tbody></table></div>
             </div>
 
             <div id="categories" class="view" style="display:none;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                    <h2>Categories</h2>
-                    <button class="btn btn-primary" onclick="openCategoryModal()" style="width: auto; padding: 10px 20px;">Add Category</button>
-                </div>
-                <div class="data-table">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Description</th>
-                            </tr>
-                        </thead>
-                        <tbody id="categoriesTableBody"></tbody>
-                    </table>
-                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;"><h2>Categories</h2><button class="btn btn-primary" onclick="openCategoryModal()" style="width: auto; padding: 10px 20px;">Add Category</button></div>
+                <div class="data-table"><table style="width: 100%; border-collapse: collapse;"><thead><tr><th>ID</th><th>Name</th><th>Description</th></tr></thead><tbody id="categoriesTableBody"></tbody></table></div>
             </div>
 
             <div id="users" class="view" style="display:none;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                    <h2>Users</h2>
-                    <button class="btn btn-primary" onclick="openUserModal()" style="width: auto; padding: 10px 20px;">Add User</button>
-                </div>
-                <div class="data-table">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="usersTableBody"></tbody>
-                    </table>
-                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;"><h2>Users</h2><button class="btn btn-primary" onclick="openUserModal()" style="width: auto; padding: 10px 20px;">Add User</button></div>
+                <div class="data-table"><table style="width: 100%; border-collapse: collapse;"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Actions</th></tr></thead><tbody id="usersTableBody"></tbody></table></div>
+            </div>
+
+            <div id="reports" class="view" style="display:none;">
+                <h2 style="margin-bottom: 20px;">Reports</h2>
+                <div class="card"><h3 class="card-title">Daily Close</h3><p>Date: <span id="dailyCloseDate"></span> | Transactions: <span id="dailyCloseTransactions">0</span></p><table style="width:100%"><tbody id="dailyCloseTableBody"></tbody></table></div>
+                <div class="card"><h3 class="card-title">Profit Report</h3><div class="data-table"><table style="width:100%"><thead><tr><th>Product</th><th>Selling</th><th>Tax</th><th>Net</th><th>Cost</th><th>Profit</th><th>Margin</th></tr></thead><tbody id="profitTableBody"></tbody></table></div></div>
+                <div class="card"><h3 class="card-title">All Sales</h3><div class="data-table"><table style="width:100%"><thead><tr><th>Receipt</th><th>Date</th><th>Cashier</th><th>Total</th></tr></thead><tbody id="allSalesTableBody"></tbody></table></div></div>
+                <div class="card"><h3 class="card-title">Low Stock</h3><div id="lowStockList"></div></div>
             </div>
 
             <div id="receipts" class="view" style="display:none;">
                 <h2 style="margin-bottom: 20px;">Receipt History</h2>
-                <div class="card">
-                    <div class="data-table">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr>
-                                    <th>Receipt No</th>
-                                    <th>Date/Time</th>
-                                    <th>Cashier</th>
-                                    <th>Items</th>
-                                    <th>Total</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="receiptHistoryBody"></tbody>
-                        </table>
-                    </div>
-                </div>
+                <div class="data-table"><table style="width:100%"><thead><tr><th>Receipt</th><th>Date</th><th>Cashier</th><th>Items</th><th>Total</th><th>Actions</th></tr></thead><tbody id="receiptHistoryBody"></tbody></table></div>
             </div>
 
             <div id="purchaseOrders" class="view" style="display:none;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                    <h2>Purchase Orders</h2>
-                    <button class="btn btn-primary" onclick="openPOModal()" style="width: auto; padding: 10px 20px;">New PO</button>
-                </div>
-                <div class="card">
-                    <div class="data-table">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Supplier</th>
-                                    <th>Product</th>
-                                    <th>Unit</th>
-                                    <th>Qty</th>
-                                    <th>Unit Cost</th>
-                                    <th>Total</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="poTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div id="reports" class="view" style="display:none;">
-                <div class="card" style="margin-bottom: 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h3 class="card-title">Daily Close Report</h3>
-                        <button class="btn btn-secondary" onclick="reprintLastReceipt()" style="width: auto; padding: 10px 15px;">Reprint Last Receipt</button>
-                    </div>
-                    <p>Date: <span id="dailyCloseDate"></span> | Transactions: <span id="dailyCloseTransactions">0</span></p>
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-                        <thead>
-                            <tr><th>Payment Method</th><th style="text-align:right;">Amount</th></tr>
-                        </thead>
-                        <tbody id="dailyCloseTableBody"></tbody>
-                    </table>
-                </div>
-                
-                <div class="card" style="margin-bottom: 20px;">
-                    <h3 class="card-title">Profit Report</h3>
-                    <div class="data-table">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Unit</th>
-                                    <th>Selling Price</th>
-                                    <th>Tax</th>
-                                    <th>Net Selling</th>
-                                    <th>Cost</th>
-                                    <th>Gross Profit</th>
-                                    <th>Margin</th>
-                                </tr>
-                            </thead>
-                            <tbody id="profitTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                    <h2>Reports</h2>
-                    <div style="display: flex; gap: 10px;">
-                        <button class="btn btn-secondary" onclick="exportSalesCSV()" style="width: auto; padding: 10px 15px;">Export Sales</button>
-                        <button class="btn btn-secondary" onclick="exportProductsCSV()" style="width: auto; padding: 10px 15px;">Export Products</button>
-                    </div>
-                </div>
-                <div class="card">
-                    <h3 class="card-title">All Sales</h3>
-                    <div class="data-table">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr>
-                                    <th>Receipt No</th>
-                                    <th>Date/Time</th>
-                                    <th>Cashier</th>
-                                    <th>Subtotal</th>
-                                    <th>Tax</th>
-                                    <th>Total</th>
-                                </tr>
-                            </thead>
-                            <tbody id="allSalesTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="card" style="margin-top: 20px;">
-                    <h3 class="card-title">Low Stock Products</h3>
-                    <div id="lowStockList"></div>
-                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;"><h2>Purchase Orders</h2><button class="btn btn-primary" onclick="openPOModal()" style="width: auto; padding: 10px 20px;">New PO</button></div>
+                <div class="data-table"><table style="width:100%"><thead><tr><th>ID</th><th>Supplier</th><th>Product</th><th>Unit</th><th>Qty</th><th>Cost</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead><tbody id="poTableBody"></tbody></table></div>
             </div>
 
             <div id="backup" class="view" style="display:none;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                    <h2>Data Backup</h2>
-                    <button class="btn btn-primary" onclick="createBackup()" style="width: auto; padding: 10px 20px;">Create Backup</button>
-                </div>
-                <div class="card">
-                    <h3 class="card-title">Existing Backups</h3>
-                    <div class="data-table">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr>
-                                    <th>Filename</th>
-                                    <th>Size</th>
-                                    <th>Created</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="backupsTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;"><h2>Backup</h2><button class="btn btn-primary" onclick="createBackup()" style="width: auto; padding: 10px 20px;">Create Backup</button></div>
+                <div class="data-table"><table style="width:100%"><thead><tr><th>Filename</th><th>Size</th><th>Created</th><th>Actions</th></tr></thead><tbody id="backupsTableBody"></tbody></table></div>
             </div>
 
             <div id="settings" class="view" style="display:none;">
                 <h2 style="margin-bottom: 20px;">Settings</h2>
-                
                 <div class="card">
-                    <h3 class="card-title" onclick="toggleSection('businessSection')" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-                        Business Information
-                        <span id="businessSectionIcon">+</span>
-                    </h3>
-                    <div id="businessSection" style="display: none;">
-                    <div class="form-group">
-                        <label>Business Name</label>
-                        <input type="text" id="businessName" placeholder="e.g., Brightline Electricals (K) Ltd" style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px;">
-                    </div>
-                    <div class="form-group">
-                        <label>P.O. Box</label>
-                        <input type="text" id="businessPoBox" placeholder="e.g., P.O. Box 12345-00100" style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px;">
-                    </div>
-                    <div class="form-group">
-                        <label>Location</label>
-                        <input type="text" id="businessLocation" placeholder="e.g., Nairobi, Kenya" style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px;">
-                    </div>
-                    <div class="form-group">
-                        <label>Tax PIN</label>
-                        <input type="text" id="businessTaxPin" placeholder="e.g., P051234567X" style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px;">
-                    </div>
-                    <div class="form-group">
-                        <label>Phone</label>
-                        <input type="text" id="businessPhone" placeholder="e.g., +254700000000" style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px;">
-                    </div>
-                    <div class="form-group">
-                        <label>Receipt Footer Message</label>
-                        <input type="text" id="receiptFooter" placeholder="e.g., Thank you! Karibu Tena!" style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px;">
-                    </div>
-                    <button class="btn btn-primary" onclick="updateBusinessInfo()" style="width: auto; padding: 10px 20px;">Save Business Info</button>
+                    <h3 class="card-title">Business Information</h3>
+                    <div class="form-group"><label>Business Name</label><input type="text" id="businessName"></div>
+                    <div class="form-group"><label>P.O. Box</label><input type="text" id="businessPoBox"></div>
+                    <div class="form-group"><label>Location</label><input type="text" id="businessLocation"></div>
+                    <div class="form-group"><label>Phone</label><input type="text" id="businessPhone"></div>
+                    <div class="form-group"><label>Tax PIN</label><input type="text" id="businessTaxPin"></div>
+                    <div class="form-group"><label>Receipt Footer</label><input type="text" id="receiptFooter"></div>
+                    <button class="btn btn-primary" onclick="updateBusinessInfo()" style="width:auto;padding:10px 20px">Save Business Info</button>
                 </div>
-                
-                </div>
-                </div>
-                
                 <div class="card">
                     <h3 class="card-title">Barcode Scanner Setup</h3>
-                    <div class="note" style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                        <strong>How Scanner Works:</strong><br>
-                        1. Connect USB barcode scanner to computer<br>
-                        2. No installation needed - plug and play<br>
-                        3. Scanner acts as a keyboard<br>
-                        4. Cashiers scan product barcodes in New Sale
-                    </div>
-                    <div class="form-group">
-                        <label>Test Scanner Here</label>
-                        <input type="text" id="scannerTest" placeholder="Scan any barcode to test..." style="width: 100%; padding: 12px; border: 2px solid #d2691e; border-radius: 8px; font-size: 16px;">
-                    </div>
-                    <div id="scannerResult" style="margin-top: 10px;"></div>
+                    <p style="font-size:13px;color:#666">USB scanners are plug-and-play. Connect and scan in New Sale.</p>
+                    <div class="form-group"><label>Test Scanner</label><input type="text" id="scannerTest" placeholder="Scan here..." style="width:100%;max-width:400px;box-sizing:border-box"></div>
                 </div>
-
+                <div class="card">
+                    <h3 class="card-title">M-Pesa Configuration (Optional)</h3>
+                    <p style="font-size:13px;color:#666">Cash works without M-Pesa. Fill only if you have Daraja credentials.</p>
+                    <div class="form-group"><label><input type="checkbox" id="mpesaEnabled"> Enable M-Pesa</label></div>
+                    <div class="form-group"><label>Consumer Key</label><input type="text" id="mpesaConsumerKey"></div>
+                    <div class="form-group"><label>Consumer Secret</label><input type="text" id="mpesaConsumerSecret"></div>
+                    <div class="form-group"><label>Passkey</label><input type="text" id="mpesaPasskey"></div>
+                    <div class="form-group"><label>Shortcode</label><input type="text" id="mpesaShortcode"></div>
+                    <button class="btn btn-primary" onclick="saveMpesaSettings()" style="width:auto;padding:10px 20px">Save M-Pesa</button>
+                </div>
                 <div class="card">
                     <h3 class="card-title">Tax Rate</h3>
-                    <div class="form-group">
-                        <label>Default Tax Rate (%)</label>
-                        <input type="number" id="defaultTaxRate" value="16" min="0" max="100" style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px;">
-                    </div>
-                    <button class="btn btn-primary" onclick="updateTaxRate()" style="width: auto; padding: 10px 20px;">Save Tax Rate</button>
+                    <div class="form-group"><label>Default Tax Rate (%)</label><input type="number" id="defaultTaxRate" value="16"></div>
+                    <button class="btn btn-primary" onclick="updateTaxRate()" style="width:auto;padding:10px 20px">Save Tax Rate</button>
                 </div>
             </div>
         </div>
@@ -385,156 +164,82 @@
 
     <div id="productModal" class="modal">
         <div class="modal-content">
-            <h3 style="color: #8b4513; margin-bottom: 20px;">Add Product</h3>
+            <h3>Add Product</h3>
             <form id="productForm">
-                <div class="form-group">
-                    <label>Product Name</label>
-                    <input type="text" id="productName" required>
-                </div>
-                <div class="form-group">
-                    <label>Barcode (Scan with scanner)</label>
-                    <input type="text" id="productBarcode" placeholder="Scan barcode here">
-                </div>
-                <div class="form-group">
-                    <label>Unit/Size</label>
-                    <input type="text" id="productUnit" placeholder="e.g., 2kg, 1kg, 500g">
-                </div>
-                <div class="form-group">
-                    <label>Category</label>
-                    <select id="productCategory"></select>
-                </div>
-                <div class="form-group">
-                    <label>Price (KSh)</label>
-                    <input type="number" id="productPrice" step="0.01" required>
-                </div>
-                <div class="form-group">
-                    <label>Cost Price (KSh) - for profit calculation</label>
-                    <input type="number" id="productCost" step="0.01" placeholder="Optional">
-                </div>
-                <div class="form-group">
-                    <label>Tax Rate (%)</label>
-                    <input type="number" id="productTaxRate" value="16" min="0" max="100">
-                </div>
-                <div class="form-group">
-                    <label>Stock</label>
-                    <input type="number" id="productStock" value="0" required>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button type="submit" class="btn btn-primary" style="flex: 1;">Add</button>
-                    <button type="button" class="btn btn-danger" onclick="closeModal('productModal')" style="flex: 1;">Cancel</button>
-                </div>
+                <div class="form-group"><label>Product Name</label><input type="text" id="productName" required></div>
+                <div class="form-group"><label>Unit/Size</label><input type="text" id="productUnit" placeholder="2kg, 1L, 500g"></div>
+                <div class="form-group"><label>Category</label><select id="productCategory"></select></div>
+                <div class="form-group"><label>Price (KSh)</label><input type="number" id="productPrice" step="0.01" required></div>
+                <div class="form-group"><label>Cost (KSh)</label><input type="number" id="productCost" step="0.01"></div>
+                <div class="form-group"><label>Tax Status</label><select id="productTaxRate"><option value="16">A - Taxable</option><option value="0">B - Non-Taxable</option></select></div>
+                <div class="form-group"><label>Stock</label><input type="number" id="productStock" value="0" required></div>
+                <div style="display:flex;gap:10px"><button type="submit" class="btn btn-primary" style="flex:1">Add</button><button type="button" class="btn btn-danger" onclick="closeModal('productModal')" style="flex:1">Cancel</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="editProductModal" class="modal">
+        <div class="modal-content">
+            <h3>Edit Product</h3>
+            <form id="editProductForm">
+                <input type="hidden" id="editProductId">
+                <div class="form-group"><label>Product Name</label><input type="text" id="editProductName" required></div>
+                <div class="form-group"><label>Unit/Size</label><input type="text" id="editProductUnit"></div>
+                <div class="form-group"><label>Price (KSh)</label><input type="number" id="editProductPrice" step="0.01" required></div>
+                <div class="form-group"><label>Tax Status</label><select id="editProductTaxRate"><option value="16">A - Taxable</option><option value="0">B - Non-Taxable</option></select></div>
+                <div class="form-group"><label>Stock</label><input type="number" id="editProductStock" required></div>
+                <div style="display:flex;gap:10px"><button type="submit" class="btn btn-primary" style="flex:1">Save</button><button type="button" class="btn btn-danger" onclick="closeModal('editProductModal')" style="flex:1">Cancel</button></div>
             </form>
         </div>
     </div>
 
     <div id="categoryModal" class="modal">
         <div class="modal-content">
-            <h3 style="color: #8b4513; margin-bottom: 20px;">Add Category</h3>
+            <h3>Add Category</h3>
             <form id="categoryForm">
-                <div class="form-group">
-                    <label>Category Name</label>
-                    <input type="text" id="categoryName" required>
-                </div>
-                <div class="form-group">
-                    <label>Description</label>
-                    <input type="text" id="categoryDescription">
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button type="submit" class="btn btn-primary" style="flex: 1;">Add</button>
-                    <button type="button" class="btn btn-danger" onclick="closeModal('categoryModal')" style="flex: 1;">Cancel</button>
-                </div>
+                <div class="form-group"><label>Category Name</label><input type="text" id="categoryName" required></div>
+                <div class="form-group"><label>Description</label><input type="text" id="categoryDescription"></div>
+                <div style="display:flex;gap:10px"><button type="submit" class="btn btn-primary" style="flex:1">Add</button><button type="button" class="btn btn-danger" onclick="closeModal('categoryModal')" style="flex:1">Cancel</button></div>
             </form>
         </div>
     </div>
 
     <div id="userModal" class="modal">
         <div class="modal-content">
-            <h3 style="color: #8b4513; margin-bottom: 20px;">Add User</h3>
+            <h3>Add User</h3>
             <form id="userForm">
-                <div class="form-group">
-                    <label>Name</label>
-                    <input type="text" id="userNameInput" required>
-                </div>
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="userEmail" required>
-                </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="userPassword" required>
-                </div>
-                <div class="form-group">
-                    <label>Role</label>
-                    <select id="userRoleSelect">
-                        <option value="cashier">Cashier</option>
-                        <option value="manager">Manager</option>
-                    </select>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button type="submit" class="btn btn-primary" style="flex: 1;">Add</button>
-                    <button type="button" class="btn btn-danger" onclick="closeModal('userModal')" style="flex: 1;">Cancel</button>
-                </div>
+                <div class="form-group"><label>Name</label><input type="text" id="userNameInput" required></div>
+                <div class="form-group"><label>Email</label><input type="email" id="userEmail" required></div>
+                <div class="form-group"><label>Password</label><input type="password" id="userPassword" required></div>
+                <div class="form-group"><label>Role</label><select id="userRoleSelect"><option value="cashier">Cashier</option><option value="manager">Manager</option></select></div>
+                <div style="display:flex;gap:10px"><button type="submit" class="btn btn-primary" style="flex:1">Add</button><button type="button" class="btn btn-danger" onclick="closeModal('userModal')" style="flex:1">Cancel</button></div>
             </form>
         </div>
     </div>
 
-    <!-- Stock Adjustment Modal -->
     <div id="stockModal" class="modal">
         <div class="modal-content">
-            <h3 style="color: #8b4513; margin-bottom: 20px;">Adjust Stock</h3>
+            <h3>Adjust Stock</h3>
             <p>Product: <strong id="stockProductName"></strong></p>
-            <p>Current Stock: <strong id="stockCurrent"></strong></p>
+            <p>Current: <strong id="stockCurrent"></strong></p>
             <form id="stockForm">
                 <input type="hidden" id="stockProductId">
-                <div class="form-group">
-                    <label>Adjustment (+ add / - remove)</label>
-                    <input type="number" id="stockAdjustment" required placeholder="e.g., -5 for damage, +10 for restock">
-                </div>
-                <div class="form-group">
-                    <label>Reason</label>
-                    <input type="text" id="stockReason" placeholder="e.g., damage, theft, counting, restock">
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button type="submit" class="btn btn-primary" style="flex: 1;">Adjust</button>
-                    <button type="button" class="btn btn-danger" onclick="closeModal('stockModal')" style="flex: 1;">Cancel</button>
-                </div>
+                <div class="form-group"><label>Adjustment (+/-)</label><input type="number" id="stockAdjustment" required></div>
+                <div class="form-group"><label>Reason</label><input type="text" id="stockReason"></div>
+                <div style="display:flex;gap:10px"><button type="submit" class="btn btn-primary" style="flex:1">Adjust</button><button type="button" class="btn btn-danger" onclick="closeModal('stockModal')" style="flex:1">Cancel</button></div>
             </form>
         </div>
     </div>
 
-    <!-- PO Modal -->
     <div id="poModal" class="modal">
         <div class="modal-content">
-            <h3 style="color: #8b4513; margin-bottom: 20px;">New Purchase Order</h3>
+            <h3>New Purchase Order</h3>
             <form id="poForm">
-                <div class="form-group">
-                    <label>Supplier Name</label>
-                    <input type="text" id="poSupplier" required placeholder="e.g., Raha Mills Ltd">
-                </div>
-                <div class="form-group">
-                    <label>Select Product (from Products list)</label>
-                    <select id="poProductId" required style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px;">
-                        <option value="">Select Product...</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Selected Product Details</label>
-                    <div id="poProductDetails" style="background: #f5e6d3; padding: 10px; border-radius: 5px; font-size: 14px;">
-                        No product selected
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Quantity</label>
-                    <input type="number" id="poQuantity" required min="1">
-                </div>
-                <div class="form-group">
-                    <label>Unit Cost (KSh)</label>
-                    <input type="number" id="poUnitCost" step="0.01" required>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button type="submit" class="btn btn-primary" style="flex: 1;">Create PO</button>
-                    <button type="button" class="btn btn-danger" onclick="closeModal('poModal')" style="flex: 1;">Cancel</button>
-                </div>
+                <div class="form-group"><label>Supplier</label><input type="text" id="poSupplier" required></div>
+                <div class="form-group"><label>Product</label><select id="poProductId"></select></div>
+                <div class="form-group"><label>Quantity</label><input type="number" id="poQuantity" required min="1"></div>
+                <div class="form-group"><label>Unit Cost</label><input type="number" id="poUnitCost" step="0.01" required></div>
+                <div style="display:flex;gap:10px"><button type="submit" class="btn btn-primary" style="flex:1">Create PO</button><button type="button" class="btn btn-danger" onclick="closeModal('poModal')" style="flex:1">Cancel</button></div>
             </form>
         </div>
     </div>

@@ -39,6 +39,30 @@ async def create_product(product_data: ProductCreate, current_user=Depends(get_c
     db.refresh(product)
     return product
 
+@router.put("/{product_id}")
+async def update_product(product_id: int, product_data: dict, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role not in ["admin", "manager"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    if "name" in product_data:
+        product.name = product_data["name"]
+    if "unit" in product_data:
+        product.unit = product_data["unit"]
+    if "price" in product_data:
+        product.price = product_data["price"]
+    if "tax_rate" in product_data:
+        product.tax_rate = product_data["tax_rate"]
+    if "stock" in product_data:
+        product.stock = product_data["stock"]
+    
+    db.commit()
+    db.refresh(product)
+    return product
+
 @router.delete("/{product_id}")
 async def delete_product(product_id: int, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.role != "admin":
