@@ -40,7 +40,9 @@ async def get_settings(current_user=Depends(get_current_user), db: Session = Dep
         "mpesa_consumer_key": get_setting("mpesa_consumer_key") or "",
         "mpesa_consumer_secret": get_setting("mpesa_consumer_secret") or "",
         "mpesa_passkey": get_setting("mpesa_passkey") or "",
-        "mpesa_shortcode": get_setting("mpesa_shortcode") or ""
+        "mpesa_shortcode": get_setting("mpesa_shortcode") or "",
+        "block_expired": get_setting("block_expired") or "false",
+        "warn_expiring": get_setting("warn_expiring") or "false"
     }
 
 @router.put("/tax-rate")
@@ -77,4 +79,9 @@ async def update_business_info(data: dict, current_user=Depends(get_current_user
     if "receipt_footer" in data:
         set_setting("receipt_footer", data["receipt_footer"])
     
-    return {"message": "Business info updated"}
+    if "block_expired" in data:
+        set_setting("block_expired", data["block_expired"])
+    if "warn_expiring" in data:
+        set_setting("warn_expiring", data["warn_expiring"])
+    
+    return {"message": "Settings updated"}

@@ -22,7 +22,7 @@ function showView(viewName) {
     if (viewName === 'analytics') { loadAnalytics(); loadExpiryReport(); }
     if (viewName === 'pos') loadProductsForPOS();
     if (viewName === 'backup') loadBackups();
-    if (viewName === 'settings') { loadSettings(); loadMpesaSettings(); }
+    if (viewName === 'settings') { loadSettings(); loadMpesaSettings(); loadExpirySettings(); }
     if (viewName === 'dashboard') loadDashboard();
     if (viewName === 'receipts') loadReceiptHistory();
     if (viewName === 'purchaseOrders') loadPurchaseOrders();
@@ -120,6 +120,32 @@ function addToCart(productId) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
     if (product.stock <= 0) { alert('OUT OF STOCK!'); return; }
+    
+    // Check expiry protection
+    if (product.expiry_date) {
+        const today = new Date();
+        const expiry = new Date(product.expiry_date);
+        const daysLeft = Math.floor((expiry - today) / (1000 * 60 * 60 * 24));
+        
+        // Check if blocking expired is enabled
+        if (daysLeft < 0) {
+            const settings = businessSettings;
+            if (settings && settings.block_expired === 'true') {
+                alert('CANNOT SELL! ' + product.name + ' EXPIRED ' + Math.abs(daysLeft) + ' days ago. Contact manager.');
+                return;
+            }
+        }
+        
+        // Check if warning for expiring is enabled
+        if (daysLeft >= 0 && daysLeft <= 7) {
+            const settings = businessSettings;
+            if (settings && settings.warn_expiring === 'true') {
+                if (!confirm('WARNING: ' + product.name + ' expires in ' + daysLeft + ' days. Sell anyway?')) {
+                    return;
+                }
+            }
+        }
+    }
     const existing = cart.find(i => i.product_id === productId);
     if (existing) {
         if (existing.quantity >= product.stock) { alert('NOT ENOUGH STOCK! Available: ' + product.stock); return; }
@@ -405,4 +431,24 @@ function togglePassword(inputId, button) {
     const input = document.getElementById(inputId);
     if (input.type === 'password') { input.type = 'text'; button.textContent = 'Hide'; }
     else { input.type = 'password'; button.textContent = 'Show'; }
+}
+
+
+// ============ EXPIRY PROTECTION SETTINGS ============
+async function loadExpirySettings() {
+    try {
+        const settings = await apiCall('/settings');
+        document.getElementById('blockExpired').checked = settings.block_expired === 'true';
+        document.getElementById('warnExpiring').checked = settings.warn_expiring === 'true';
+    } catch (e) { console.error(e); }
+}
+
+async function saveExpirySettings() {
+    try {
+        await apiCall('/settings/business', 'PUT', {
+            block_expired: document.getElementById('blockExpired').checked ? 'true' : 'false',
+            warn_expiring: document.getElementById('warnExpiring').checked ? 'true' : 'false'
+        });
+        alert('Expiry settings saved!');
+    } catch (e) { alert(e.message); }
 }
