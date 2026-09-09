@@ -19,8 +19,19 @@ async def create_user(user_data: UserCreate, current_user=Depends(get_current_us
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admin can create users")
     existing = db.query(User).filter(User.email == user_data.email).first()
-    if existing:
+    if existing and existing.is_active:
         raise HTTPException(status_code=400, detail="Email already registered")
+    
+    if existing and not existing.is_active:
+        # Reactivate the user
+        existing.name = user_data.name
+        existing.password_hash = hash_password(user_data.password)
+        existing.phone = user_data.phone
+        existing.role = user_data.role
+        existing.is_active = True
+        db.commit()
+        db.refresh(existing)
+        return existing
     user = User(
         name=user_data.name,
         email=user_data.email,
