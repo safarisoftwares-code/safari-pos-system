@@ -202,6 +202,8 @@ async def receipt_history(current_user=Depends(get_current_user), db: Session = 
                     "name": db.query(Product).filter(Product.id == item.product_id).first().name if db.query(Product).filter(Product.id == item.product_id).first() else "Unknown",
                     "quantity": item.quantity,
                     "unit_price": item.unit_price,
+                    "tax_rate": item.tax_rate or 0,
+                    "tax_amount": item.tax_amount or 0,
                     "total_price": item.total_price
                 }
                 for item in items

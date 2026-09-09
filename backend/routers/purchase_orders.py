@@ -93,3 +93,15 @@ async def update_po_status(po_id: int, status: str, current_user=Depends(get_cur
         "unit": po.unit,
         "new_stock": product.stock if status == "received" else None
     }
+
+
+@router.delete("/{po_id}")
+async def delete_po(po_id: int, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin")
+    po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
+    if not po:
+        raise HTTPException(status_code=404, detail="PO not found")
+    db.delete(po)
+    db.commit()
+    return {"message": "PO deleted"}

@@ -101,3 +101,15 @@ async def adjust_stock(product_id: int, adjustment: int, reason: str = "manual",
         "new_stock": product.stock,
         "reason": reason
     }
+
+
+@router.delete("/categories/{category_id}")
+async def delete_category(category_id: int, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin")
+    category = db.query(Category).filter(Category.id == category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    db.delete(category)
+    db.commit()
+    return {"message": "Category deleted"}

@@ -47,7 +47,7 @@ async function loadCategories() {
     try {
         categories = await apiCall('/products/categories');
         const tbody = document.getElementById('categoriesTableBody');
-        if (tbody) { tbody.innerHTML = categories.map(c => '<tr><td>' + c.id + '</td><td>' + c.name + '</td><td>' + (c.description || '-') + '</td></tr>').join('') || '<tr><td colspan="3">No categories</td></tr>'; }
+        if (tbody) { tbody.innerHTML = categories.map(c => '<tr><td>' + c.id + '</td><td>' + c.name + '</td><td>' + (c.description || '-') + '</td><td><button onclick="deleteCategory(' + c.id + ')" style="color:red;padding:3px 8px;font-size:11px">Delete</button></td></tr>').join('') || '<tr><td colspan="4">No categories</td></tr>'; }
     } catch (e) { console.error(e); }
 }
 
@@ -316,7 +316,14 @@ async function loadPurchaseOrders() {
     try {
         const pos = await apiCall('/purchase-orders');
         const tbody = document.getElementById('poTableBody');
-        if (tbody) { tbody.innerHTML = pos.map(po => '<tr><td>' + po.id + '</td><td>' + po.supplier + '</td><td>' + po.product_name + '</td><td>' + (po.unit || '-') + '</td><td>' + po.quantity + '</td><td>KSh ' + po.unit_cost + '</td><td>KSh ' + po.total_cost + '</td><td>' + po.status.toUpperCase() + '</td><td>' + (po.status === 'pending' ? '<button onclick="updatePOStatus(' + po.id + ',\'received\')" style="padding:5px 10px;font-size:10px">Receive</button>' : '-') + '</td></tr>').join('') || '<tr><td colspan="9">No POs</td></tr>'; }
+        if (tbody) { tbody.innerHTML = pos.map(po => {
+                let actions = '';
+                if (po.status === 'pending') {
+                    actions += '<button onclick="updatePOStatus(' + po.id + ',\'received\')" style="padding:5px 10px;font-size:10px;margin-right:3px;background:#2e7d32;color:white;border:none;border-radius:3px">Receive</button>';
+                }
+                actions += '<button onclick="deletePO(' + po.id + ')" style="padding:5px 10px;font-size:10px;color:red">Delete</button>';
+                return '<tr><td>' + po.id + '</td><td>' + po.supplier + '</td><td>' + po.product_name + '</td><td>' + (po.unit || '-') + '</td><td>' + po.quantity + '</td><td>KSh ' + po.unit_cost + '</td><td>KSh ' + po.total_cost + '</td><td>' + po.status.toUpperCase() + '</td><td>' + actions + '</td></tr>';
+            }).join('') || '<tr><td colspan="9">No POs</td></tr>'; }
     } catch (e) { alert(e.message); }
 }
 
@@ -644,5 +651,65 @@ async function restoreSelectedFile() {
         
         const result = await response.json();
         alert(result.message);
+    } catch (e) { alert(e.message); }
+}
+
+
+async function deleteCategory(id) {
+    if (prompt('Type DELETE to confirm category removal:') !== 'DELETE') return;
+    try {
+        await apiCall('/products/categories/' + id, 'DELETE');
+        alert('Category deleted!');
+        loadCategories();
+    } catch (e) { alert(e.message); }
+}
+
+
+function printSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+    
+    const printWindow = window.open('', 'Print', 'width=800,height=600');
+    printWindow.document.write('<html><head><title>Print</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}th,td{padding:8px;border:1px solid #ddd;text-align:left}th{background:#8b4513;color:white}h2{color:#8b4513}</style></head><body>');
+    printWindow.document.write(section.innerHTML);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    setTimeout(() => { printWindow.print(); }, 500);
+}
+
+
+async function deletePO(poId) {
+    if (prompt('Type DELETE to confirm PO removal:') !== 'DELETE') return;
+    try {
+        await apiCall('/purchase-orders/' + poId, 'DELETE');
+        alert('PO deleted!');
+        loadPurchaseOrders();
+    } catch (e) { alert(e.message); }
+}
+
+
+async function reprintReceipt(receiptNo) {
+    try {
+        const receipts = await apiCall('/sales/history');
+        const receipt = receipts.find(r => r.receipt_no === receiptNo);
+        if (!receipt) { alert('Receipt not found'); return; }
+        
+        let settings = businessSettings;
+        if (!settings) { try { settings = await apiCall('/settings'); } catch (e) { settings = {}; } }
+        
+        let itemsHtml = '';
+        receipt.items.forEach(item => {
+            const taxLabel = (item.tax_rate || 0) > 0 ? 'A' : 'B';
+            itemsHtml += '<tr><td>' + item.name + '</td><td style="text-align:center">' + item.quantity + '</td><td style="text-align:center;font-weight:bold">' + taxLabel + '</td><td style="text-align:right">' + item.total_price.toFixed(2) + '</td></tr>';
+        });
+        
+        const html = '<!DOCTYPE html><html><head><title>Reprint ' + receipt.receipt_no + '</title><style>body{font-family:"Courier New",monospace;padding:20px;max-width:300px;margin:auto}.h{text-align:center;margin-bottom:10px}.h h2{margin:0;font-size:16px}.h p{margin:2px 0;font-size:11px}.stamp{text-align:center;background:#fff3cd;border:2px solid #ffc107;padding:8px;margin:10px 0}.stamp strong{color:#d32f2f;font-size:13px}hr{border:none;border-top:1px dashed #000;margin:10px 0}table{width:100%;font-size:12px;border-collapse:collapse}td{padding:3px 0}.tr{font-weight:bold;font-size:14px}.cb{display:block;margin:20px auto;padding:10px 20px;background:#8b4513;color:white;border:none;border-radius:5px;cursor:pointer}@media print{.cb{display:none}}</style></head><body><div class="h"><h2>' + (settings.business_name || 'Folksmed Supppliers') + '</h2>' + (settings.business_po_box ? '<p>' + settings.business_po_box + '</p>' : '') + (settings.business_location ? '<p>' + settings.business_location + '</p>' : '') + (settings.business_phone ? '<p>Tel: ' + settings.business_phone + '</p>' : '') + '</div><hr><div class="stamp"><strong>*** REPRINTED COPY ***</strong></div><hr><p style="font-size:12px">Receipt: ' + receipt.receipt_no + '</p><p style="font-size:12px">Date: ' + receipt.created_at + '</p><hr><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:center">Tax</th><th style="text-align:right">Amount</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><hr><table><tr><td>Subtotal:</td><td style="text-align:right">' + receipt.subtotal.toFixed(2) + '</td></tr><tr><td>Tax (incl.):</td><td style="text-align:right">' + receipt.tax_amount.toFixed(2) + '</td></tr><tr class="tr"><td>TOTAL:</td><td style="text-align:right">KSh ' + receipt.total_amount.toFixed(2) + '</td></tr></table><hr><p style="font-size:12px">Payment: ' + receipt.payment_method.toUpperCase() + '</p><button class="cb" onclick="window.close()">Close</button></body></html>';
+        
+        const pw = window.open('', 'Reprint', 'width=400,height=600');
+        pw.document.write(html);
+        pw.document.close();
+        setTimeout(() => { try { pw.print(); } catch(e) {} }, 1000);
+        setTimeout(() => { try { pw.close(); } catch(e) {} }, 15000);
+        
     } catch (e) { alert(e.message); }
 }
