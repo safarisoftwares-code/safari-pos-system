@@ -190,44 +190,12 @@ async def download_backup(filename: str, current_user=Depends(get_current_user),
 
 @router.delete("/{filename}")
 async def delete_backup(filename: str, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Remove from history list ONLY - file remains safe"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admin can delete")
     
-    if ".." in filename or "/" in filename or "\\" in filename:
-        raise HTTPException(status_code=400, detail="Invalid filename")
-    
-    backup_path = None
-    ext_location = get_backup_location(db)
-    desktop_folder = os.path.join(os.path.expanduser("~"), "Desktop", "Safari-POS Backup")
-    
-    dirs_to_check = [BACKUP_DIR, desktop_folder]
-    
-    # Check all drives for Safari-POS Backup folders
-    import string
-    for letter in string.ascii_uppercase:
-        drive = letter + ":\\"
-        backup_folder = os.path.join(drive, "Safari-POS Backup")
-        if os.path.exists(backup_folder):
-            dirs_to_check.append(backup_folder)
-    
-    if ext_location and os.path.exists(ext_location):
-        dirs_to_check.append(ext_location)
-    
-    for dir_path in dirs_to_check:
-        if os.path.exists(dir_path):
-            candidate = os.path.join(dir_path, filename)
-            if os.path.exists(candidate):
-                backup_path = candidate
-                break
-    
-    if not backup_path:
-        raise HTTPException(status_code=404, detail="Backup not found")
-    
-    # DO NOT delete the file - just return success
-    # The file remains safe on flash drive/desktop
+    # DO NOT delete the actual file - just return success
     return {"message": "Removed from history. File remains safe."}
-
-
 @router.get("/drives")
 async def detect_drives(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
     """Detect available drives for backup"""
