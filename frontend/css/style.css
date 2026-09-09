@@ -380,3 +380,100 @@ body {
         height: auto;
     }
 }
+
+/* CART LAYOUT FIX */
+.cart-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 120px);
+}
+
+.cart-items {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 200px;
+}
+
+.cart-total-section {
+    flex-shrink: 0;
+    border-top: 2px solid #ecf0f1;
+    padding: 5px 0;
+    background: white;
+}
+
+/* Cart items scrollbar */
+.cart-items {
+    overflow-y: scroll !important;
+    scrollbar-width: thin;
+    scrollbar-color: #8b4513 #f0f0f0;
+}
+
+.cart-items::-webkit-scrollbar {
+    width: 8px;
+}
+
+.cart-items::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 5px;
+}
+
+.cart-items::-webkit-scrollbar-thumb {
+    background: #8b4513;
+    border-radius: 5px;
+}
+
+/* VISIBLE SCROLLBAR */
+.cart-items {
+    overflow-y: scroll !important;
+    max-height: none; min-height: 0;
+}
+
+.cart-items::-webkit-scrollbar-track {
+    background: #e0e0e0;
+    border-radius: 5px;
+}
+
+/* LEFT-SIDE THICK PERMANENT SCROLLBAR */
+.cart-items {
+    direction: rtl;  /* Moves scrollbar to LEFT */
+    overflow-y: scroll !important;
+    padding-left: 18px;  /* Space for scrollbar */
+}
+
+.cart-items > * {
+    direction: ltr;  /* Content stays left-to-right */
+}
+
+.cart-items {
+    direction: rtl;
+    overflow-y: scroll !important;
+    padding-left: 20px;
+}
+
+.cart-items > * {
+    direction: ltr;
+}
+
+.cart-items::-webkit-scrollbar {
+    width: 18px;
+    display: block;
+    background: #9e9e9e;
+}
+
+.cart-items::-webkit-scrollbar-track {
+    background: #e0e0e0;
+    border-radius: 9px;
+    border: 1px solid #bdbdbd;
+}
+
+.cart-items::-webkit-scrollbar-thumb {
+    background: #5d3a1a;
+    border-radius: 9px;
+    min-height: 60px;
+    border: 3px solid #e0e0e0;
+    box-shadow: inset 0 0 0 1px #8b4513;
+}
+
+.cart-items::-webkit-scrollbar-thumb:hover {
+    background: #8b4513;
+}

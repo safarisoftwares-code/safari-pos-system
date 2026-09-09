@@ -42,6 +42,7 @@ async def get_settings(current_user=Depends(get_current_user), db: Session = Dep
         "mpesa_passkey": get_setting("mpesa_passkey") or "",
         "mpesa_shortcode": get_setting("mpesa_shortcode") or "",
         "block_expired": get_setting("block_expired") or "false",
+        "backup_location": get_setting("backup_location") or "",
         "warn_expiring": get_setting("warn_expiring") or "false"
     }
 
@@ -81,6 +82,8 @@ async def update_business_info(data: dict, current_user=Depends(get_current_user
     
     if "block_expired" in data:
         set_setting("block_expired", data["block_expired"])
+    if "backup_location" in data:
+        set_setting("backup_location", data["backup_location"])
     if "warn_expiring" in data:
         set_setting("warn_expiring", data["warn_expiring"])
     

@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from database import Base, engine, SessionLocal
 from models import User
 from auth import hash_password
-from routers import auth, products, sales, customers, reports, users, backup, settings, purchase_orders, analytics
+from routers import auth, products, sales, customers, reports, users, backup, settings, purchase_orders, analytics, mpesa
 import os
 from dotenv import load_dotenv
 
@@ -30,6 +30,7 @@ app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(backup.router, prefix="/api/v1/backup", tags=["backup"])
 app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
+app.include_router(mpesa.router, prefix="/api/v1/mpesa", tags=["mpesa"])
 app.include_router(purchase_orders.router, prefix="/api/v1/purchase-orders", tags=["purchase-orders"])
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

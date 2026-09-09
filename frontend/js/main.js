@@ -7,7 +7,7 @@ let businessSettings = null;
 function showView(viewName) {
     const user = authManager.getUser();
     if (user && user.role === 'cashier') {
-        const allowed = ['dashboard', 'pos', 'receipts', 'reports'];
+        const allowed = ['dashboard', 'pos', 'receipts'];
         if (!allowed.includes(viewName)) { alert('Access denied.'); return; }
     }
     document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
@@ -19,13 +19,13 @@ function showView(viewName) {
     if (viewName === 'categories') loadCategories();
     if (viewName === 'users') loadUsers();
     if (viewName === 'reports') { loadAllSales(); loadLowStock(); loadDailyClose(); loadProfitReport(); }
-    if (viewName === 'analytics') { loadAnalytics(); loadExpiryReport(); }
     if (viewName === 'pos') loadProductsForPOS();
     if (viewName === 'backup') loadBackups();
     if (viewName === 'settings') { loadSettings(); loadMpesaSettings(); loadExpirySettings(); }
     if (viewName === 'dashboard') loadDashboard();
     if (viewName === 'receipts') loadReceiptHistory();
     if (viewName === 'purchaseOrders') loadPurchaseOrders();
+    if (viewName === 'analytics') { loadAnalytics(); loadExpiryReport(); }
 }
 
 function openModal(id) { document.getElementById(id).classList.add('active'); }
@@ -34,7 +34,8 @@ function openProductModal() { loadCategoriesForSelect(); openModal('productModal
 function openCategoryModal() { openModal('categoryModal'); }
 function openUserModal() { openModal('userModal'); }
 
-async function apiCall(url, method = 'GET', data = null) {
+async function apiCall(url, method, data) {
+    method = method || 'GET';
     const options = { method: method, headers: authManager.getAuthHeaders() };
     if (data) options.body = JSON.stringify(data);
     const response = await fetch(API_BASE_URL + url, options);
@@ -68,7 +69,7 @@ async function loadProducts() {
             tbody.innerHTML = products.map(p => {
                 const cat = categories.find(c => c.id === p.category_id);
                 const taxLabel = (p.tax_rate || 0) > 0 ? 'A' : 'B';
-                return '<tr><td>' + p.id + '</td><td>' + p.name + '</td><td>' + (p.unit || '-') + '</td><td>' + (cat ? cat.name : '-') + '</td><td>KSh ' + p.price + '</td><td style="text-align:center;font-weight:bold">' + taxLabel + '</td><td>' + p.stock + '</td><td><button onclick="openEditProductModal(' + p.id + ')" style="padding:5px 10px;font-size:12px;margin-right:3px;background:#2e7d32;color:white;border:none;border-radius:3px">Edit</button> <button onclick="openStockModal(' + p.id + ')" style="padding:5px 10px;font-size:12px;margin-right:3px">Stock</button> <button onclick="deleteProduct(' + p.id + ')" style="padding:5px 10px;font-size:12px;color:red">Delete</button></td></tr>';
+                return '<tr><td>' + p.id + '</td><td>' + p.name + '</td><td>' + (p.unit || '-') + '</td><td>' + (cat ? cat.name : '-') + '</td><td>KSh ' + p.price + '</td><td style="text-align:center;font-weight:bold">' + taxLabel + '</td><td>' + p.stock + '</td><td><button onclick="openEditProductModal(' + p.id + ')" style="padding:5px 10px;font-size:10px;margin-right:3px;background:#2e7d32;color:white;border:none;border-radius:3px">Edit</button> <button onclick="openStockModal(' + p.id + ')" style="padding:5px 10px;font-size:10px;margin-right:3px">Stock</button> <button onclick="deleteProduct(' + p.id + ')" style="padding:5px 10px;font-size:10px;color:red">Delete</button></td></tr>';
             }).join('') || '<tr><td colspan="8">No products</td></tr>';
         }
     } catch (e) { alert(e.message); }
@@ -79,10 +80,26 @@ async function loadProductsForPOS() {
     try { products = await apiCall('/products'); renderPOSProducts(products); } catch (e) { alert(e.message); }
 }
 
+let productPage = 0;
+const PRODUCTS_PER_PAGE = 6;
+
 function renderPOSProducts(list) {
     const grid = document.getElementById('productGrid');
-    if (grid) { grid.innerHTML = list.map(p => '<div class="product-card" onclick="addToCart(' + p.id + ')"><div class="product-name">' + p.name + '</div>' + (p.unit ? '<div style="font-size:12px;color:#666">' + p.unit + '</div>' : '') + '<div class="product-price">KSh ' + p.price + '</div>' + (p.stock <= 0 ? '<div style="background:#d32f2f;color:white;padding:2px 5px;border-radius:3px;font-size:11px">OUT OF STOCK</div>' : '<div class="product-stock">Stock: ' + p.stock + '</div>') + '</div>').join(''); }
+    if (!grid) return;
+    
+    // Show only first 6 products - use search for more
+    const displayProducts = list.slice(0, 6);
+    
+    grid.innerHTML = displayProducts.map(p => 
+        '<div class="product-card" onclick="addToCart(' + p.id + ')">' +
+        '<div class="product-name">' + p.name + '</div>' +
+        (p.unit ? '<div style="font-size:10px;color:#666">' + p.unit + '</div>' : '') +
+        '<div class="product-price">KSh ' + p.price + '</div>' +
+        (p.stock <= 0 ? '<div style="background:#d32f2f;color:white;padding:2px 5px;border-radius:3px;font-size:9px">OUT OF STOCK</div>' : '<div class="product-stock">Stock: ' + p.stock + '</div>') +
+        '</div>'
+    ).join('');
 }
+
 
 function openEditProductModal(productId) {
     const product = products.find(p => p.id === productId);
@@ -106,7 +123,7 @@ async function deleteProduct(id) {
 async function loadUsers() {
     try {
         const users = await apiCall('/users');
-        document.getElementById('usersTableBody').innerHTML = users.map(u => '<tr><td>' + u.id + '</td><td>' + u.name + '</td><td>' + u.email + '</td><td>' + u.role.toUpperCase() + '</td><td><button onclick="deleteUser(' + u.id + ')" style="padding:5px 10px;font-size:12px;color:red">Remove</button></td></tr>').join('');
+        document.getElementById('usersTableBody').innerHTML = users.map(u => '<tr><td>' + u.id + '</td><td>' + u.name + '</td><td>' + u.email + '</td><td>' + u.role.toUpperCase() + '</td><td><button onclick="deleteUser(' + u.id + ')" style="padding:5px 10px;font-size:10px;color:red">Remove</button></td></tr>').join('');
     } catch (e) { alert(e.message); }
 }
 
@@ -120,35 +137,21 @@ function addToCart(productId) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
     if (product.stock <= 0) { alert('OUT OF STOCK!'); return; }
-    
-    // Check expiry protection
     if (product.expiry_date) {
         const today = new Date();
         const expiry = new Date(product.expiry_date);
         const daysLeft = Math.floor((expiry - today) / (1000 * 60 * 60 * 24));
-        
-        // Check if blocking expired is enabled
-        if (daysLeft < 0) {
-            const settings = businessSettings;
-            if (settings && settings.block_expired === 'true') {
-                alert('CANNOT SELL! ' + product.name + ' EXPIRED ' + Math.abs(daysLeft) + ' days ago. Contact manager.');
-                return;
-            }
+        if (daysLeft < 0 && businessSettings && businessSettings.block_expired === 'true') {
+            alert('CANNOT SELL! ' + product.name + ' EXPIRED ' + Math.abs(daysLeft) + ' days ago.');
+            return;
         }
-        
-        // Check if warning for expiring is enabled
-        if (daysLeft >= 0 && daysLeft <= 7) {
-            const settings = businessSettings;
-            if (settings && settings.warn_expiring === 'true') {
-                if (!confirm('WARNING: ' + product.name + ' expires in ' + daysLeft + ' days. Sell anyway?')) {
-                    return;
-                }
-            }
+        if (daysLeft >= 0 && daysLeft <= 7 && businessSettings && businessSettings.warn_expiring === 'true') {
+            if (!confirm('WARNING: ' + product.name + ' expires in ' + daysLeft + ' days. Sell anyway?')) return;
         }
     }
     const existing = cart.find(i => i.product_id === productId);
     if (existing) {
-        if (existing.quantity >= product.stock) { alert('NOT ENOUGH STOCK! Available: ' + product.stock); return; }
+        if (existing.quantity >= product.stock) { alert('NOT ENOUGH STOCK!'); return; }
         existing.quantity++;
     } else {
         cart.push({ product_id: product.id, name: product.name, unit: product.unit, quantity: 1, unit_price: product.price, tax_rate: product.tax_rate || 0, stock: product.stock });
@@ -163,7 +166,7 @@ function updateQuantity(productId, change) {
     if (!item) return;
     item.quantity += change;
     if (item.quantity <= 0) { removeFromCart(productId); return; }
-    if (item.quantity > item.stock) { alert('NOT ENOUGH STOCK! Available: ' + item.stock); item.quantity -= change; return; }
+    if (item.quantity > item.stock) { alert('NOT ENOUGH STOCK!'); item.quantity -= change; return; }
     updateCart();
 }
 
@@ -183,16 +186,7 @@ function updateCart() {
             const lineTotal = i.quantity * i.unit_price;
             const taxRate = i.tax_rate || 0;
             const lineTax = taxRate > 0 ? lineTotal - (lineTotal / (1 + taxRate / 100)) : 0;
-            return '<div style="display:flex;align-items:center;justify-content:space-between;padding:15px;border-bottom:1px solid #ecf0f1;gap:10px">' +
-                '<div style="flex:2"><strong style="font-size:14px">' + i.name + '</strong>' + (i.unit ? ' <small>(' + i.unit + ')</small>' : '') + '<br><small style="color:#666">KSh ' + i.unit_price + ' each</small></div>' +
-                '<div style="flex:1;display:flex;align-items:center;gap:8px;justify-content:center">' +
-                '<button onclick="updateQuantity(' + i.product_id + ',-1)" style="width:24px;height:24px;font-size:14px;background:#f0f0f0;color:#333;border:1px solid #ddd;border-radius:3px;cursor:pointer">-</button>' +
-                '<span style="font-size:16px;font-weight:bold;min-width:30px;text-align:center">' + i.quantity + '</span>' +
-                '<button onclick="updateQuantity(' + i.product_id + ',1)" style="width:24px;height:24px;font-size:14px;background:#f0f0f0;color:#333;border:1px solid #ddd;border-radius:3px;cursor:pointer">+</button>' +
-                '</div>' +
-                '<div style="flex:1.5;text-align:right"><strong style="font-size:14px">KSh ' + lineTotal.toFixed(2) + '</strong><br><small style="color:#d2691e">Tax: KSh ' + lineTax.toFixed(2) + '</small></div>' +
-                '<button onclick="removeFromCart(' + i.product_id + ')" style="background:#d32f2f;color:white;border:none;border-radius:5px;width:25px;height:25px;cursor:pointer;font-size:14px">X</button>' +
-                '</div>';
+            return '<div style="display:flex;align-items:center;justify-content:space-between;padding:1px;border-bottom:1px solid #f0f0f0;gap:2px;min-height:20px"><div style="flex:2"><strong style="font-size:9px">' + i.name + '</strong>' + (i.unit ? ' <small>(' + i.unit + ')</small>' : '') + '<br><small style="color:#666;font-size:9px">KSh ' + i.unit_price + ' each</small></div><div style="flex:1;display:flex;align-items:center;gap:8px;justify-content:center"><button onclick="updateQuantity(' + i.product_id + ',-1)" style="width:24px;height:24px;font-size:9px;background:#f0f0f0;color:#333;border:1px solid #ddd;border-radius:3px;cursor:pointer">-</button><span style="font-size:10px;font-weight:bold;min-width:20px;text-align:center">' + i.quantity + '</span><button onclick="updateQuantity(' + i.product_id + ',1)" style="width:24px;height:24px;font-size:9px;background:#f0f0f0;color:#333;border:1px solid #ddd;border-radius:3px;cursor:pointer">+</button></div><div style="flex:1.5;text-align:right"><strong style="font-size:9px">KSh ' + lineTotal.toFixed(2) + '</strong> <small style="color:#d2691e;font-size:8px">Tax:' + lineTax.toFixed(2) + '</small></div><button onclick="removeFromCart(' + i.product_id + ')" style="background:#d32f2f;color:white;border:none;border-radius:5px;width:25px;height:25px;cursor:pointer;font-size:9px">X</button></div>';
         }).join('') || '<p style="color:#95a5a6;text-align:center;margin-top:50px">Cart is empty</p>';
     }
     document.getElementById('subtotal').textContent = 'KSh ' + subtotal.toFixed(2);
@@ -208,10 +202,40 @@ async function checkout() {
         if (product && product.stock <= 0) { alert('OUT OF STOCK: ' + item.name); return; }
         if (product && item.quantity > product.stock) { alert('INSUFFICIENT STOCK: ' + item.name); return; }
     }
-    const method = prompt('Payment method (cash/mpesa/card):', 'cash');
-    if (!method) return;
+    let total = 0;
+    cart.forEach(i => { total += i.quantity * i.unit_price; });
+    total -= (total * discount / 100);
+    document.getElementById('paymentTotal').textContent = 'KSh ' + total.toFixed(2);
+    document.getElementById('mpesaPhoneSection').style.display = 'none';
+    openModal('paymentModal');
+}
+
+async function processPayment(paymentMethod) {
+    closeModal('paymentModal');
     try {
-        const sale = await apiCall('/sales', 'POST', { items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price })), payment_method: method, discount: discount });
+        const sale = await apiCall('/sales', 'POST', { items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price })), payment_method: paymentMethod, discount: discount });
+        printReceipt(sale);
+        cart = []; discount = 0;
+        document.getElementById('discountInput').value = 0;
+        updateCart(); loadProductsForPOS(); loadDashboard();
+    } catch (e) { alert(e.message); }
+}
+
+async function confirmMpesa() {
+    const phone = document.getElementById('mpesaPhone').value.trim();
+    if (!phone || phone.length < 10) { alert('Enter valid phone (2547XXXXXXXX)'); return; }
+    let total = 0;
+    cart.forEach(i => { total += i.quantity * i.unit_price; });
+    total -= (total * discount / 100);
+    closeModal('paymentModal');
+    document.getElementById('mpesaPhoneSection').style.display = 'none';
+    document.getElementById('mpesaPhone').value = '';
+    try {
+        await apiCall('/mpesa/stk-push', 'POST', { phone_number: phone, amount: total, receipt_no: 'INV-' + Date.now() });
+        alert('M-Pesa prompt sent to ' + phone + '!');
+    } catch (e) { alert('M-Pesa error: ' + e.message); return; }
+    try {
+        const sale = await apiCall('/sales', 'POST', { items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price })), payment_method: 'mpesa', discount: discount });
         printReceipt(sale);
         cart = []; discount = 0;
         document.getElementById('discountInput').value = 0;
@@ -225,7 +249,7 @@ function printReceipt(sale) {
         const taxLabel = (item.tax_rate || 0) > 0 ? 'A' : 'B';
         itemsHtml += '<tr><td>' + item.name + (item.unit ? ' (' + item.unit + ')' : '') + '</td><td style="text-align:center">' + item.quantity + '</td><td style="text-align:center;font-weight:bold">' + taxLabel + '</td><td style="text-align:right">' + item.total_price.toFixed(2) + '</td></tr>';
     });
-    const html = '<!DOCTYPE html><html><head><title>Receipt</title><style>body{font-family:"Courier New",monospace;padding:20px;max-width:300px;margin:auto}.header{text-align:center;margin-bottom:15px}.header h2{margin:0;font-size:18px}.header p{margin:2px 0;font-size:12px}hr{border:none;border-top:1px dashed #000;margin:10px 0}table{width:100%;font-size:12px;border-collapse:collapse}td{padding:3px 0}.total-row{font-weight:bold;font-size:14px}.footer{text-align:center;margin-top:15px;font-size:11px}.close-btn{display:block;margin:20px auto;padding:10px 20px;background:#8b4513;color:white;border:none;border-radius:5px;cursor:pointer}@media print{.close-btn{display:none}}</style></head><body><div class="header"><h2>' + (businessSettings ? businessSettings.business_name : '') + '</h2>' + (businessSettings && businessSettings.business_po_box ? '<p>' + businessSettings.business_po_box + '</p>' : '') + (businessSettings && businessSettings.business_location ? '<p>' + businessSettings.business_location + '</p>' : '') + (businessSettings && businessSettings.business_phone ? '<p>Tel: ' + businessSettings.business_phone + '</p>' : '') + '</div><hr><p style="font-size:12px">Receipt: ' + sale.receipt_no + '</p><p style="font-size:12px">Date: ' + new Date(sale.created_at).toLocaleString() + '</p><hr><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:center">Tax</th><th style="text-align:right">Amount</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><hr><table><tr><td>Subtotal:</td><td style="text-align:right">' + sale.subtotal.toFixed(2) + '</td></tr><tr><td>Tax (incl.):</td><td style="text-align:right">' + sale.tax_amount.toFixed(2) + '</td></tr><tr class="total-row"><td>TOTAL:</td><td style="text-align:right">KSh ' + sale.total_amount.toFixed(2) + '</td></tr></table><hr><p style="font-size:12px">Payment: ' + sale.payment_method.toUpperCase() + '</p><div class="footer"><p>' + (businessSettings ? businessSettings.receipt_footer : '') + '</p><hr><p style="font-size:9px">A = Taxable | B = Non-Taxable</p></div><button class="close-btn" onclick="window.close()">Close</button></body></html>';
+    const html = '<!DOCTYPE html><html><head><title>Receipt</title><style>body{font-family:"Courier New",monospace;padding:20px;max-width:300px;margin:auto}.header{text-align:center;margin-bottom:15px}.header h2{margin:0;font-size:18px}.header p{margin:2px 0;font-size:10px}hr{border:none;border-top:1px dashed #000;margin:10px 0}table{width:100%;font-size:10px;border-collapse:collapse}td{padding:3px 0}.total-row{font-weight:bold;font-size:9px}.footer{text-align:center;margin-top:15px;font-size:9px}.close-btn{display:block;margin:20px auto;padding:10px 20px;background:#8b4513;color:white;border:none;border-radius:5px;cursor:pointer}@media print{.close-btn{display:none}}</style></head><body><div class="header"><h2>' + (businessSettings ? businessSettings.business_name : '') + '</h2>' + (businessSettings && businessSettings.business_po_box ? '<p>' + businessSettings.business_po_box + '</p>' : '') + (businessSettings && businessSettings.business_location ? '<p>' + businessSettings.business_location + '</p>' : '') + (businessSettings && businessSettings.business_phone ? '<p>Tel: ' + businessSettings.business_phone + '</p>' : '') + '</div><hr><p style="font-size:10px">Receipt: ' + sale.receipt_no + '</p><p style="font-size:10px">Date: ' + new Date(sale.created_at).toLocaleString() + '</p><hr><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:center">Tax</th><th style="text-align:right">Amount</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><hr><table><tr><td>Subtotal:</td><td style="text-align:right">' + sale.subtotal.toFixed(2) + '</td></tr><tr><td>Tax (incl.):</td><td style="text-align:right">' + sale.tax_amount.toFixed(2) + '</td></tr><tr class="total-row"><td>TOTAL:</td><td style="text-align:right">KSh ' + sale.total_amount.toFixed(2) + '</td></tr></table><hr><p style="font-size:10px">Payment: ' + sale.payment_method.toUpperCase() + '</p><div class="footer"><p>' + (businessSettings ? businessSettings.receipt_footer : '') + '</p><hr><p style="font-size:9px">A = Taxable | B = Non-Taxable</p></div><button class="close-btn" onclick="window.close()">Close</button></body></html>';
     const pw = window.open('', 'Receipt', 'width=400,height=600');
     pw.document.write(html); pw.document.close();
     setTimeout(() => { try { pw.print(); } catch(e) {} }, 1000);
@@ -251,8 +275,8 @@ async function loadReceiptHistory() {
         if (tbody) {
             tbody.innerHTML = receipts.map((r, index) => {
                 let btn = '';
-                if (isAdminManager) { btn = '<button onclick="reprintReceipt(\'' + r.receipt_no + '\')" style="padding:5px 10px;font-size:12px">Reprint</button>'; }
-                else { btn = index === 0 ? '<button onclick="reprintLastReceiptOnly()" style="padding:5px 10px;font-size:12px">Reprint</button>' : '<span style="color:#999;font-size:11px">View only</span>'; }
+                if (isAdminManager) { btn = '<button onclick="reprintReceipt(\'' + r.receipt_no + '\')" style="padding:5px 10px;font-size:10px">Reprint</button>'; }
+                else { btn = index === 0 ? '<button onclick="reprintLastReceiptOnly()" style="padding:5px 10px;font-size:10px">Reprint</button>' : '<span style="color:#999;font-size:9px">View only</span>'; }
                 return '<tr><td>' + r.receipt_no + '</td><td>' + r.created_at + '</td><td>' + r.cashier + '</td><td>' + r.items.length + '</td><td>KSh ' + r.total_amount.toFixed(2) + '</td><td>' + btn + '</td></tr>';
             }).join('') || '<tr><td colspan="6">No receipts</td></tr>';
         }
@@ -270,7 +294,7 @@ async function reprintLastReceiptOnly() {
             const taxLabel = (item.tax_rate || 0) > 0 ? 'A' : 'B';
             itemsHtml += '<tr><td>' + item.name + '</td><td style="text-align:center">' + item.quantity + '</td><td style="text-align:center;font-weight:bold">' + taxLabel + '</td><td style="text-align:right">' + item.total_price.toFixed(2) + '</td></tr>';
         });
-        const html = '<!DOCTYPE html><html><head><title>Reprint</title><style>body{font-family:"Courier New",monospace;padding:20px;max-width:300px;margin:auto}.h{text-align:center;margin-bottom:10px}.h h2{margin:0;font-size:16px}.h p{margin:2px 0;font-size:11px}.stamp{text-align:center;background:#fff3cd;border:2px solid #ffc107;padding:8px;margin:10px 0}.stamp strong{color:#d32f2f;font-size:13px}hr{border:none;border-top:1px dashed #000;margin:10px 0}table{width:100%;font-size:12px;border-collapse:collapse}td{padding:3px 0}.tr{font-weight:bold;font-size:14px}.cb{display:block;margin:20px auto;padding:10px 20px;background:#8b4513;color:white;border:none;border-radius:5px;cursor:pointer}@media print{.cb{display:none}}</style></head><body><div class="h"><h2>' + (settings.business_name || 'Folksmed Supppliers') + '</h2>' + (settings.business_po_box ? '<p>' + settings.business_po_box + '</p>' : '') + (settings.business_location ? '<p>' + settings.business_location + '</p>' : '') + (settings.business_phone ? '<p>Tel: ' + settings.business_phone + '</p>' : '') + '</div><hr><div class="stamp"><strong>*** REPRINTED COPY ***</strong></div><hr><p style="font-size:12px">Receipt: ' + receipt.receipt_no + '</p><p style="font-size:12px">Date: ' + receipt.created_at + '</p><hr><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:center">Tax</th><th style="text-align:right">Amount</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><hr><table><tr><td>Subtotal:</td><td style="text-align:right">' + receipt.subtotal.toFixed(2) + '</td></tr><tr><td>Tax (incl.):</td><td style="text-align:right">' + receipt.tax_amount.toFixed(2) + '</td></tr><tr class="tr"><td>TOTAL:</td><td style="text-align:right">KSh ' + receipt.total_amount.toFixed(2) + '</td></tr></table><hr><p style="font-size:12px">Payment: ' + receipt.payment_method.toUpperCase() + '</p><hr><p style="font-size:9px">A = Taxable | B = Non-Taxable</p><button class="cb" onclick="window.close()">Close</button></body></html>';
+        const html = '<!DOCTYPE html><html><head><title>Reprint</title><style>body{font-family:"Courier New",monospace;padding:20px;max-width:300px;margin:auto}.h{text-align:center;margin-bottom:10px}.h h2{margin:0;font-size:16px}.h p{margin:2px 0;font-size:9px}.stamp{text-align:center;background:#fff3cd;border:2px solid #ffc107;padding:8px;margin:10px 0}.stamp strong{color:#d32f2f;font-size:13px}hr{border:none;border-top:1px dashed #000;margin:10px 0}table{width:100%;font-size:10px;border-collapse:collapse}td{padding:3px 0}.tr{font-weight:bold;font-size:9px}.cb{display:block;margin:20px auto;padding:10px 20px;background:#8b4513;color:white;border:none;border-radius:5px;cursor:pointer}@media print{.cb{display:none}}</style></head><body><div class="h"><h2>' + (settings.business_name || 'Folksmed Supppliers') + '</h2>' + (settings.business_po_box ? '<p>' + settings.business_po_box + '</p>' : '') + (settings.business_location ? '<p>' + settings.business_location + '</p>' : '') + (settings.business_phone ? '<p>Tel: ' + settings.business_phone + '</p>' : '') + '</div><hr><div class="stamp"><strong>*** REPRINTED COPY ***</strong></div><hr><p style="font-size:10px">Receipt: ' + receipt.receipt_no + '</p><p style="font-size:10px">Date: ' + receipt.created_at + '</p><hr><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:center">Tax</th><th style="text-align:right">Amount</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><hr><table><tr><td>Subtotal:</td><td style="text-align:right">' + receipt.subtotal.toFixed(2) + '</td></tr><tr><td>Tax (incl.):</td><td style="text-align:right">' + receipt.tax_amount.toFixed(2) + '</td></tr><tr class="tr"><td>TOTAL:</td><td style="text-align:right">KSh ' + receipt.total_amount.toFixed(2) + '</td></tr></table><hr><p style="font-size:10px">Payment: ' + receipt.payment_method.toUpperCase() + '</p><hr><p style="font-size:9px">A = Taxable | B = Non-Taxable</p><button class="cb" onclick="window.close()">Close</button></body></html>';
         const pw = window.open('', 'Reprint', 'width=400,height=600');
         pw.document.write(html); pw.document.close();
         setTimeout(() => { try { pw.print(); } catch(e) {} }, 1000);
@@ -292,7 +316,7 @@ async function loadPurchaseOrders() {
     try {
         const pos = await apiCall('/purchase-orders');
         const tbody = document.getElementById('poTableBody');
-        if (tbody) { tbody.innerHTML = pos.map(po => '<tr><td>' + po.id + '</td><td>' + po.supplier + '</td><td>' + po.product_name + '</td><td>' + (po.unit || '-') + '</td><td>' + po.quantity + '</td><td>KSh ' + po.unit_cost + '</td><td>KSh ' + po.total_cost + '</td><td>' + po.status.toUpperCase() + '</td><td>' + (po.status === 'pending' ? '<button onclick="updatePOStatus(' + po.id + ',\'received\')" style="padding:5px 10px;font-size:12px">Receive</button>' : '-') + '</td></tr>').join('') || '<tr><td colspan="9">No POs</td></tr>'; }
+        if (tbody) { tbody.innerHTML = pos.map(po => '<tr><td>' + po.id + '</td><td>' + po.supplier + '</td><td>' + po.product_name + '</td><td>' + (po.unit || '-') + '</td><td>' + po.quantity + '</td><td>KSh ' + po.unit_cost + '</td><td>KSh ' + po.total_cost + '</td><td>' + po.status.toUpperCase() + '</td><td>' + (po.status === 'pending' ? '<button onclick="updatePOStatus(' + po.id + ',\'received\')" style="padding:5px 10px;font-size:10px">Receive</button>' : '-') + '</td></tr>').join('') || '<tr><td colspan="9">No POs</td></tr>'; }
     } catch (e) { alert(e.message); }
 }
 
@@ -343,6 +367,7 @@ async function loadSettings() {
         document.getElementById('businessPhone').value = settings.business_phone || '';
         document.getElementById('businessTaxPin').value = settings.business_tax_pin || '';
         document.getElementById('receiptFooter').value = settings.receipt_footer || '';
+        document.getElementById('backupLocation').value = settings.backup_location || '';
     } catch (e) { console.error(e); }
 }
 
@@ -379,6 +404,21 @@ async function saveMpesaSettings() {
     } catch (e) { alert(e.message); }
 }
 
+async function loadExpirySettings() {
+    try {
+        const settings = await apiCall('/settings');
+        document.getElementById('blockExpired').checked = settings.block_expired === 'true';
+        document.getElementById('warnExpiring').checked = settings.warn_expiring === 'true';
+    } catch (e) { console.error(e); }
+}
+
+async function saveExpirySettings() {
+    try {
+        await apiCall('/settings/business', 'PUT', { block_expired: document.getElementById('blockExpired').checked ? 'true' : 'false', warn_expiring: document.getElementById('warnExpiring').checked ? 'true' : 'false' });
+        alert('Expiry settings saved!');
+    } catch (e) { alert(e.message); }
+}
+
 function openStockModal(productId) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
@@ -390,17 +430,104 @@ function openStockModal(productId) {
     openModal('stockModal');
 }
 
-async function createBackup() { try { await apiCall('/backup/create', 'POST'); alert('Backup created!'); loadBackups(); } catch (e) { alert(e.message); } }
+async function createBackup() {
+    openModal('backupLocationModal');
+}
+
+async function backupToDesktop() {
+    closeModal('backupLocationModal');
+    try {
+        const result = await apiCall('/backup/create?location=desktop', 'POST');
+        alert('Backup created!\nSaved to: ' + result.saved_to);
+        loadBackups();
+    } catch (e) { alert(e.message); }
+}
+
+async function backupToFlash() {
+    closeModal('backupLocationModal');
+    try {
+        // Get available drives
+        const data = await apiCall('/backup/drives');
+        
+        if (data.drives.length === 0) {
+            alert('No drives detected!');
+            return;
+        }
+        
+        // Build drive selection
+        let driveList = 'Available drives:\n';
+        data.drives.forEach((d, i) => {
+            driveList += (i+1) + '. ' + d + '\n';
+        });
+        driveList += '\nEnter number to select drive:';
+        
+        const choice = prompt(driveList, '1');
+        if (!choice) return;
+        
+        const idx = parseInt(choice) - 1;
+        if (idx < 0 || idx >= data.drives.length) {
+            alert('Invalid selection');
+            return;
+        }
+        
+        const selectedDrive = data.drives[idx];
+        const result = await apiCall('/backup/create?location=' + encodeURIComponent(selectedDrive), 'POST');
+        alert('Backup created!\nSaved to: ' + result.saved_to);
+        loadBackups();
+    } catch (e) { alert(e.message); }
+}
+
+
 
 async function loadBackups() {
     try {
         const backups = await apiCall('/backup/list');
         const tbody = document.getElementById('backupsTableBody');
-        if (tbody) { tbody.innerHTML = backups.map(b => '<tr><td>' + b.filename + '</td><td>' + (b.size / 1024).toFixed(2) + ' KB</td><td>' + b.created + '</td><td><button onclick="deleteBackup(\'' + b.filename + '\')" style="color:red">Delete</button></td></tr>').join('') || '<tr><td colspan="4">No backups</td></tr>'; }
+        if (tbody) {
+            tbody.innerHTML = backups.map(b => {
+                return '<tr><td>' + b.filename + '</td><td>' + (b.size / 1024).toFixed(2) + ' KB</td><td>' + b.created + '</td><td>' +
+                    '<button onclick="restoreBackup(\'' + b.filename + '\')" style="color:#2e7d32;margin-right:5px;padding:3px 8px;font-size:11px">Restore</button>' +
+                    '<button onclick="deleteBackup(\'' + b.filename + '\')" style="color:red;padding:3px 8px;font-size:11px">Delete</button>' +
+                    '</td></tr>';
+            }).join('') || '<tr><td colspan="4">No backups</td></tr>';
+        }
     } catch (e) { console.error(e); }
 }
 
+async function restoreBackup(filename) {
+    // Ask where to restore from
+    const source = prompt('Restore from where?\n1. Default location\n2. Flash drive / External folder\n\nEnter 1 or 2:', '1');
+    if (!source) return;
+    
+    if (source === '2') {
+        const folderPath = prompt('Enter the full folder path where backup is located:\n(e.g., E:\\SafariPOS_Backups or D:\\Backups)');
+        if (!folderPath) return;
+        
+        if (prompt('Type RESTORE to confirm!') !== 'RESTORE') return;
+        if (!confirm('WARNING: All current data will be replaced!')) return;
+        
+        try {
+            await apiCall('/backup/restore/' + filename + '?source_path=' + encodeURIComponent(folderPath), 'POST');
+            alert('Database restored from external location! Restart server.');
+        } catch (e) { alert(e.message); }
+        return;
+    }
+    
+    if (prompt('Type RESTORE to confirm!') !== 'RESTORE') return;
+    if (!confirm('WARNING: All current data will be replaced!')) return;
+    try {
+        await apiCall('/backup/restore/' + filename, 'POST');
+        alert('Database restored! Restart server.');
+    } catch (e) { alert(e.message); }
+}
+
 async function deleteBackup(filename) { if (!confirm('Delete backup?')) return; try { await apiCall('/backup/' + filename, 'DELETE'); loadBackups(); } catch (e) { alert(e.message); } }
+
+function togglePassword(inputId, button) {
+    const input = document.getElementById(inputId);
+    if (input.type === 'password') { input.type = 'text'; button.textContent = 'Hide'; }
+    else { input.type = 'password'; button.textContent = 'Show'; }
+}
 
 document.getElementById('discountInput').addEventListener('input', (e) => { discount = parseFloat(e.target.value) || 0; updateCart(); });
 document.getElementById('searchProduct').addEventListener('input', (e) => { renderPOSProducts(products.filter(p => p.name.toLowerCase().includes(e.target.value.toLowerCase()))); });
@@ -427,28 +554,95 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadBusinessSettings();
 });
 
-function togglePassword(inputId, button) {
-    const input = document.getElementById(inputId);
-    if (input.type === 'password') { input.type = 'text'; button.textContent = 'Hide'; }
-    else { input.type = 'password'; button.textContent = 'Show'; }
+
+async function restoreBackup(filename) {
+    if (prompt('Type RESTORE to confirm database restore:\n\nThis will replace ALL current data with the backup!') !== 'RESTORE') return;
+    if (!confirm('FINAL WARNING: All current data will be replaced. Continue?')) return;
+    try {
+        await apiCall('/backup/restore/' + filename, 'POST');
+        alert('Database restored! Restart the server to apply changes.');
+    } catch (e) { alert(e.message); }
 }
 
 
-// ============ EXPIRY PROTECTION SETTINGS ============
-async function loadExpirySettings() {
+async function loadBackupLocation() {
     try {
         const settings = await apiCall('/settings');
-        document.getElementById('blockExpired').checked = settings.block_expired === 'true';
-        document.getElementById('warnExpiring').checked = settings.warn_expiring === 'true';
+        document.getElementById('backupLocation').value = settings.backup_location || '';
     } catch (e) { console.error(e); }
 }
 
-async function saveExpirySettings() {
+async function saveBackupLocation() {
     try {
         await apiCall('/settings/business', 'PUT', {
-            block_expired: document.getElementById('blockExpired').checked ? 'true' : 'false',
-            warn_expiring: document.getElementById('warnExpiring').checked ? 'true' : 'false'
+            backup_location: document.getElementById('backupLocation').value
         });
-        alert('Expiry settings saved!');
+        alert('Backup location saved!');
+    } catch (e) { alert(e.message); }
+}
+
+
+async function restoreFromPath() {
+    const folderPath = document.getElementById('restorePath').value.trim();
+    
+    if (folderPath) {
+        // Restore from external folder
+        const filename = prompt('Enter the backup filename to restore:\n(e.g., safaripos_backup_20260909_135610.db)');
+        if (!filename) return;
+        
+        if (prompt('Type RESTORE to confirm!') !== 'RESTORE') return;
+        if (!confirm('WARNING: All current data will be replaced!')) return;
+        
+        try {
+            await apiCall('/backup/restore/' + filename + '?source_path=' + encodeURIComponent(folderPath), 'POST');
+            alert('Database restored from ' + folderPath + '! Restart server.');
+        } catch (e) { alert(e.message); }
+    } else {
+        // Restore from default location
+        const filename = prompt('Enter the backup filename to restore:\n(e.g., safaripos_backup_20260909_135610.db)');
+        if (!filename) return;
+        
+        if (prompt('Type RESTORE to confirm!') !== 'RESTORE') return;
+        if (!confirm('WARNING: All current data will be replaced!')) return;
+        
+        try {
+            await apiCall('/backup/restore/' + filename, 'POST');
+            alert('Database restored from default location! Restart server.');
+        } catch (e) { alert(e.message); }
+    }
+}
+
+
+async function restoreSelectedFile() {
+    const fileInput = document.getElementById('restoreFileInput');
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Please select a backup file first!');
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    const filename = file.name;
+    
+    if (prompt('Type RESTORE to confirm database restoration!') !== 'RESTORE') return;
+    if (!confirm('FINAL WARNING: All current data will be replaced with ' + filename + '!')) return;
+    
+    try {
+        // Read the file and send to backend
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch(API_BASE_URL + '/backup/restore-file', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + authManager.token },
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Restore failed');
+        }
+        
+        const result = await response.json();
+        alert(result.message);
     } catch (e) { alert(e.message); }
 }

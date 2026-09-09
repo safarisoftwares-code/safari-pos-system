@@ -12,7 +12,7 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     role = Column(String, default="cashier")
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
     sales = relationship("Sale", back_populates="cashier")
 
 class Category(Base):
@@ -20,7 +20,7 @@ class Category(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
     description = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
     products = relationship("Product", back_populates="category")
 
 class Product(Base):
@@ -37,7 +37,7 @@ class Product(Base):
     tax_rate = Column(Float, default=0)  # NEW: Tax rate percentage
     expiry_date = Column(String, nullable=True)  # NEW: Expiry date (YYYY-MM-DD)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
     category = relationship("Category", back_populates="products")
     sale_items = relationship("SaleItem", back_populates="product")
 
@@ -49,7 +49,7 @@ class Customer(Base):
     email = Column(String, unique=True, nullable=True)
     credit_limit = Column(Float, default=0)
     credit_balance = Column(Float, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
     sales = relationship("Sale", back_populates="customer")
 
 class Sale(Base):
@@ -65,7 +65,7 @@ class Sale(Base):
     payment_method = Column(String, nullable=False)
     payment_ref = Column(String, nullable=True)
     status = Column(String, default="completed")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
     customer = relationship("Customer", back_populates="sales")
     cashier = relationship("User", back_populates="sales")
     items = relationship("SaleItem", back_populates="sale")
@@ -83,7 +83,7 @@ class PurchaseOrder(Base):
     total_cost = Column(Float, nullable=False)
     status = Column(String, default="pending")  # pending, received, cancelled
     created_by = Column(Integer, ForeignKey("users.id"))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
 
 class SaleItem(Base):
     __tablename__ = "sale_items"
