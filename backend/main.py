@@ -7,6 +7,7 @@ from models import User
 from auth import hash_password
 from routers import auth, products, sales, customers, reports, users, backup, settings, purchase_orders, analytics, mpesa
 import os
+import sys
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -33,7 +34,11 @@ app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytic
 app.include_router(mpesa.router, prefix="/api/v1/mpesa", tags=["mpesa"])
 app.include_router(purchase_orders.router, prefix="/api/v1/purchase-orders", tags=["purchase-orders"])
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# PyInstaller EXE support
+if getattr(sys, 'frozen', False):
+    BASE_DIR = sys._MEIPASS
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
 app.mount("/static/css", StaticFiles(directory=os.path.join(FRONTEND_DIR, "css")), name="css")

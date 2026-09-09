@@ -228,9 +228,30 @@ async function processPayment(paymentMethod) {
     } catch (e) { alert(e.message); }
 }
 
+
+
+function normalizePhone(phone) {
+    // Remove all non-digits
+    let cleaned = phone.replace(/\D/g, '');
+    
+    // If starts with 254, already international
+    if (cleaned.startsWith('254')) {
+        return cleaned;
+    }
+    
+    // If starts with 0, remove it
+    if (cleaned.startsWith('0')) {
+        cleaned = cleaned.substring(1);
+    }
+    
+    // Add 254 prefix
+    return '254' + cleaned;
+}
+
+
 async function confirmMpesa() {
-    const phone = document.getElementById('mpesaPhone').value.trim();
-    if (!phone || phone.length < 10) { alert('Enter valid phone (2547XXXXXXXX)'); return; }
+    const phone = normalizePhone(document.getElementById('mpesaPhone').value.trim());
+    if (!phone || phone.length < 12 || phone.length > 12) { alert('INVALID PHONE NUMBER!\n\nPlease enter a valid 10-digit phone number.\n\nExamples:\n0741676521\n741676521\n0112168732'); return; }
     let total = 0;
     cart.forEach(i => { total += i.quantity * i.unit_price; });
     total -= (total * discount / 100);
@@ -569,14 +590,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 
-async function restoreBackup(filename) {
-    if (prompt('Type RESTORE to confirm database restore:\n\nThis will replace ALL current data with the backup!') !== 'RESTORE') return;
-    if (!confirm('FINAL WARNING: All current data will be replaced. Continue?')) return;
-    try {
-        await apiCall('/backup/restore/' + filename, 'POST');
-        alert('Database restored! Restart the server to apply changes.');
-    } catch (e) { alert(e.message); }
-}
+async 
 
 
 async function loadBackupLocation() {

@@ -128,7 +128,7 @@
                 
             </div>
 
-            <div id="settings" class="view" style="display:none;">
+            <div <div id="settings" class="view" style="display:none;">
                 <h2 style="margin-bottom:20px">Settings</h2>
                 <div class="card"><h3 class="card-title">Business Information</h3>
                     <div class="form-group"><label>Business Name</label><input type="text" id="businessName"></div>
@@ -159,7 +159,7 @@
             </div>
             <div id="mpesaPhoneSection" style="display:none;margin-top:15px">
                 <label>M-Pesa Phone:</label>
-                <input type="text" id="mpesaPhone" placeholder="2547XXXXXXXX" style="width:100%;padding:12px;margin:5px 0;border:2px solid #0088cc;border-radius:8px">
+                <input type="text" id="mpesaPhone" placeholder="2547XXXXXXXX" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'')" style="width:100%;padding:12px;margin:5px 0;border:2px solid #0088cc;border-radius:8px">
                 <button onclick="confirmMpesa()" style="width:100%;padding:12px;background:#0088cc;color:white;border:none;border-radius:8px">Send M-Pesa Prompt</button>
             </div>
             <button onclick="closeModal('paymentModal')" style="width:100%;margin-top:15px;padding:12px;background:#d32f2f;color:white;border:none;border-radius:8px">Cancel</button>
