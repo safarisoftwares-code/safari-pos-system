@@ -211,7 +211,14 @@ async function checkout() {
 }
 
 async function processPayment(paymentMethod) {
+    // If M-Pesa, show phone input section (DON'T close modal)
+    if (paymentMethod === 'mpesa') {
+        document.getElementById('mpesaPhoneSection').style.display = 'block';
+        return;
+    }
+    
     closeModal('paymentModal');
+    
     try {
         const sale = await apiCall('/sales', 'POST', { items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price })), payment_method: paymentMethod, discount: discount });
         printReceipt(sale);
