@@ -6,13 +6,6 @@ The Force Behind the Future
 
 ---
 
-## Default Login
-
-- Email: info@safarisoftwares.co.ke
-- Password: info123
-
-Note: Change these credentials in the .env file
-
 ---
 
 ## Quick Start
@@ -84,6 +77,12 @@ safaripos/
   README.md
 
 ---
+
+## Security
+
+- Credentials are stored in .env (NOT committed to git)
+- Default credentials provided to client separately during setup
+- Change credentials after first login
 
 ## Security
 
