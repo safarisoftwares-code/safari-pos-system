@@ -279,3 +279,44 @@ async def get_last_receipt(current_user=Depends(get_current_user), db: Session =
             for item in items
         ]
     }
+
+
+@router.delete("/receipt/{receipt_no}")
+async def delete_receipt(receipt_no: str, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Delete a single receipt (tax ledger is NOT affected)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can delete receipts")
+    
+    sale = db.query(Sale).filter(Sale.receipt_no == receipt_no).first()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+    
+    # Delete sale items first
+    db.query(SaleItem).filter(SaleItem.sale_id == sale.id).delete()
+    # Delete sale
+    db.delete(sale)
+    db.commit()
+    
+    return {"message": f"Receipt {receipt_no} deleted. Tax records preserved."}
+
+@router.delete("/delete-before/{date}")
+async def delete_sales_before(date: str, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Delete all sales before a specific date (tax ledger is NOT affected)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can delete sales")
+    
+    try:
+        cutoff = datetime.strptime(date, "%Y-%m-%d")
+    except:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    # Find all sales before cutoff
+    sales_to_delete = db.query(Sale).filter(Sale.created_at < cutoff).all()
+    count = len(sales_to_delete)
+    
+    for sale in sales_to_delete:
+        db.query(SaleItem).filter(SaleItem.sale_id == sale.id).delete()
+        db.delete(sale)
+    
+    db.commit()
+    return {"message": f"Deleted {count} receipts before {date}. Tax records preserved."}

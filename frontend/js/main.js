@@ -306,7 +306,8 @@ async function loadReceiptHistory() {
                 let btn = '';
                 if (isAdminManager) { btn = '<button onclick="reprintReceipt(\'' + r.receipt_no + '\')" style="padding:5px 10px;font-size:10px">Reprint</button>'; }
                 else { btn = index === 0 ? '<button onclick="reprintLastReceiptOnly()" style="padding:5px 10px;font-size:10px">Reprint</button>' : '<span style="color:#999;font-size:9px">View only</span>'; }
-                return '<tr><td>' + r.receipt_no + '</td><td>' + r.created_at + '</td><td>' + r.cashier + '</td><td>' + r.items.length + '</td><td>KSh ' + r.total_amount.toFixed(2) + '</td><td>' + btn + '</td></tr>';
+                const delBtn = isAdminManager ? '<button onclick="deleteReceipt(\'' + r.receipt_no + '\')" style="color:red;padding:3px 8px;font-size:11px;margin-left:5px">Delete</button>' : '';
+                return '<tr><td>' + r.receipt_no + '</td><td>' + r.created_at + '</td><td>' + r.cashier + '</td><td>' + r.items.length + '</td><td>KSh ' + r.total_amount.toFixed(2) + '</td><td>' + btn + delBtn + '</td></tr>';
             }).join('') || '<tr><td colspan="6">No receipts</td></tr>';
         }
     } catch (e) { alert(e.message); }
@@ -382,7 +383,7 @@ async function loadAllSales() {
     try {
         const sales = await apiCall('/sales/all');
         const tbody = document.getElementById('allSalesTableBody');
-        if (tbody) { tbody.innerHTML = sales.map(s => '<tr><td>' + s.receipt_no + '</td><td>' + s.created_at + '</td><td>' + s.cashier + '</td><td>KSh ' + s.total_amount.toFixed(2) + '</td></tr>').join('') || '<tr><td colspan="4">No sales</td></tr>'; }
+        if (tbody) { tbody.innerHTML = sales.map(s => '<tr><td>' + s.receipt_no + '</td><td>' + s.created_at + '</td><td>' + s.cashier + '</td><td>KSh ' + s.total_amount.toFixed(2) + '</td><td><button onclick="deleteReceipt(\'' + s.receipt_no + '\')" style="color:red;padding:3px 8px;font-size:11px">Delete</button></td></tr>').join('') || '<tr><td colspan="5">No sales</td></tr>'; }
     } catch (e) { console.error(e); }
 }
 
@@ -747,5 +748,30 @@ async function resetDemoData() {
     try {
         const result = await apiCall('/backup/reset-demo', 'POST');
         alert('Demo data cleared successfully!\n\nBackup saved to:\n' + result.backup_created + '\n\nRestart the server now.');
+    } catch (e) { alert(e.message); }
+}
+
+
+async function deleteReceipt(receiptNo) {
+    if (prompt('Type DELETE to remove receipt ' + receiptNo + ':') !== 'DELETE') return;
+    if (!confirm('Delete this receipt?\n\nNOTE: Tax records will be KEPT for compliance.')) return;
+    try {
+        await apiCall('/sales/receipt/' + receiptNo, 'DELETE');
+        alert('Receipt deleted. Tax records preserved.');
+        loadAllSales();
+        loadReceiptHistory();
+    } catch (e) { alert(e.message); }
+}
+
+async function deleteSalesBefore() {
+    const date = prompt('Delete all sales before (YYYY-MM-DD):');
+    if (!date) return;
+    if (prompt('Type DELETE to confirm:') !== 'DELETE') return;
+    if (!confirm('Delete ALL sales before ' + date + '?\n\nTax records will be KEPT.')) return;
+    try {
+        const result = await apiCall('/sales/delete-before/' + date, 'DELETE');
+        alert(result.message);
+        loadAllSales();
+        loadReceiptHistory();
     } catch (e) { alert(e.message); }
 }
