@@ -19,13 +19,17 @@ async def create_user(user_data: UserCreate, current_user=Depends(get_current_us
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admin can create users")
     
-    # Normalize: empty string becomes None
+        # Normalize: empty string becomes None
     email = user_data.email.strip() if user_data.email and user_data.email.strip() else None
     phone = user_data.phone.strip() if user_data.phone and user_data.phone.strip() else None
     
     # Require at least one login method
     if not email and not phone:
         raise HTTPException(status_code=400, detail="Either Email or Phone number is required")
+    
+    # Auto-generate hidden email for phone-only users (satisfies DB NOT NULL constraint)
+    if not email and phone:
+        email = f"{phone}@safari-pos.local"
     
     # Check for existing by email
     if email:
