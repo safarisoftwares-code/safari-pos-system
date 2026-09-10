@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
-from auth import get_current_user
-from models import Product
+from auth import get_current_user, hash_password
+from models import Product, User
 import sqlite3
 import os
 
