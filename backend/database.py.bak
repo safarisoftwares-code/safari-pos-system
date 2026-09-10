@@ -2,36 +2,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 import os
-import sys
 
-def find_database_path():
-    """Find the database no matter where EXE or script is located"""
-    if getattr(sys, 'frozen', False):
-        # Running as EXE
-        exe_dir = os.path.dirname(sys.executable)
-        # Try multiple possible locations
-        candidates = [
-            os.path.join(exe_dir, 'database', 'safaripos.db'),
-            os.path.join(os.path.dirname(exe_dir), 'database', 'safaripos.db'),
-            os.path.join(os.path.dirname(os.path.dirname(exe_dir)), 'database', 'safaripos.db'),
-        ]
-        for path in candidates:
-            db_dir = os.path.dirname(path)
-            if os.path.exists(db_dir):
-                print(f"USING DB: {path}")
-                return path
-        # If none found, try to create the first candidate's folder
-        os.makedirs(os.path.dirname(candidates[0]), exist_ok=True)
-        print(f"CREATED DB FOLDER: {os.path.dirname(candidates[0])}")
-        return candidates[0]
-    else:
-        # Running as script
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        path = os.path.join(base_dir, 'database', 'safaripos.db')
-        print(f"USING DB (script): {path}")
-        return path
-
-DB_PATH = find_database_path()
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(BASE_DIR, 'database', 'safaripos.db')
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -56,8 +29,7 @@ def init_db():
     Base.metadata.create_all(bind=engine)
     
     # Create database backup before any changes
-    backup_dir = os.path.join(os.path.dirname(DB_PATH), '..', 'backups')
-    backup_dir = os.path.abspath(backup_dir)
+    backup_dir = os.path.join(BASE_DIR, 'backups')
     os.makedirs(backup_dir, exist_ok=True)
     
     db = SessionLocal()

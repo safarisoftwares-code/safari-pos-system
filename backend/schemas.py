@@ -4,7 +4,7 @@ from datetime import datetime
 
 class UserCreate(BaseModel):
     name: str
-    email: str
+    email: Optional[str] = None
     password: str
     phone: Optional[str] = None
     role: str = "cashier"
@@ -16,7 +16,8 @@ class UserLogin(BaseModel):
 class UserResponse(BaseModel):
     id: int
     name: str
-    email: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
     role: str
     is_active: bool
     class Config:

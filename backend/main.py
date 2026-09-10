@@ -84,3 +84,15 @@ async def startup_event():
         print("========================================")
         print("")
     db.close()
+
+if __name__ == "__main__":
+    import uvicorn
+    import sys
+    import io
+
+    if sys.stdout is None:
+        sys.stdout = io.StringIO()
+    if sys.stderr is None:
+        sys.stderr = io.StringIO()
+
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_config=None, access_log=False)

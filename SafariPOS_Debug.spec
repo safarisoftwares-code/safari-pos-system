@@ -1,12 +1,21 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_all
+
+datas = [('frontend', 'frontend'), ('database', 'database')]
+binaries = []
+hiddenimports = ['passlib.handlers.bcrypt', 'bcrypt']
+tmp_ret = collect_all('passlib')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('bcrypt')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
     ['backend/main.py'],
     pathex=[],
-    binaries=[],
-    datas=[('frontend', 'frontend')],
-    hiddenimports=['passlib.handlers.bcrypt', 'bcrypt'],
+    binaries=binaries,
+    datas=datas,
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -22,14 +31,14 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='SafariPOS',
+    name='SafariPOS_Debug',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,
+    console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

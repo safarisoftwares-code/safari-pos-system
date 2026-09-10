@@ -18,25 +18,51 @@ async def get_users(current_user=Depends(get_current_user), db: Session = Depend
 async def create_user(user_data: UserCreate, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admin can create users")
-    existing = db.query(User).filter(User.email == user_data.email).first()
-    if existing and existing.is_active:
-        raise HTTPException(status_code=400, detail="Email already registered")
     
-    if existing and not existing.is_active:
-        # Reactivate the user
-        existing.name = user_data.name
-        existing.password_hash = hash_password(user_data.password)
-        existing.phone = user_data.phone
-        existing.role = user_data.role
-        existing.is_active = True
-        db.commit()
-        db.refresh(existing)
-        return existing
+    # Normalize: empty string becomes None
+    email = user_data.email.strip() if user_data.email and user_data.email.strip() else None
+    phone = user_data.phone.strip() if user_data.phone and user_data.phone.strip() else None
+    
+    # Require at least one login method
+    if not email and not phone:
+        raise HTTPException(status_code=400, detail="Either Email or Phone number is required")
+    
+    # Check for existing by email
+    if email:
+        existing = db.query(User).filter(User.email == email).first()
+        if existing and existing.is_active:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        if existing and not existing.is_active:
+            existing.name = user_data.name
+            existing.password_hash = hash_password(user_data.password)
+            existing.phone = phone
+            existing.role = user_data.role
+            existing.is_active = True
+            db.commit()
+            db.refresh(existing)
+            return existing
+    
+    # Check for existing by phone
+    if phone:
+        existing_phone = db.query(User).filter(User.phone == phone).first()
+        if existing_phone and existing_phone.is_active:
+            raise HTTPException(status_code=400, detail="Phone already registered")
+        if existing_phone and not existing_phone.is_active:
+            existing_phone.name = user_data.name
+            existing_phone.password_hash = hash_password(user_data.password)
+            existing_phone.email = email
+            existing_phone.role = user_data.role
+            existing_phone.is_active = True
+            db.commit()
+            db.refresh(existing_phone)
+            return existing_phone
+    
+    # Create new user
     user = User(
         name=user_data.name,
-        email=user_data.email,
+        email=email,
         password_hash=hash_password(user_data.password),
-        phone=user_data.phone,
+        phone=phone,
         role=user_data.role
     )
     db.add(user)

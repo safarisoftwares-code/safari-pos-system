@@ -629,7 +629,43 @@ document.getElementById('posCategoryFilter').addEventListener('change', (e) => {
 document.getElementById('categoryForm').addEventListener('submit', async (e) => { e.preventDefault(); try { await apiCall('/products/categories', 'POST', { name: document.getElementById('categoryName').value, description: document.getElementById('categoryDescription').value || null }); closeModal('categoryModal'); e.target.reset(); alert('Category added!'); loadCategories(); } catch (e) { alert(e.message); } });
 document.getElementById('productForm').addEventListener('submit', async (e) => { e.preventDefault(); try { await apiCall('/products', 'POST', { name: document.getElementById('productName').value, unit: document.getElementById('productUnit').value || null, category_id: document.getElementById('productCategory').value ? parseInt(document.getElementById('productCategory').value) : null, price: parseFloat(document.getElementById('productPrice').value), cost: parseFloat(document.getElementById('productCost').value) || null, tax_rate: parseFloat(document.getElementById('productTaxRate').value) || 0, stock: parseInt(document.getElementById('productStock').value), expiry_date: document.getElementById('productExpiry').value || null }); closeModal('productModal'); e.target.reset(); alert('Product added!'); loadProducts(); } catch (e) { alert(e.message); } });
 document.getElementById('editProductForm').addEventListener('submit', async (e) => { e.preventDefault(); const productId = document.getElementById('editProductId').value; try { await apiCall('/products/' + productId, 'PUT', { name: document.getElementById('editProductName').value, unit: document.getElementById('editProductUnit').value || null, price: parseFloat(document.getElementById('editProductPrice').value), tax_rate: parseFloat(document.getElementById('editProductTaxRate').value), stock: parseInt(document.getElementById('editProductStock').value), expiry_date: document.getElementById('editProductExpiry').value || null }); closeModal('editProductModal'); alert('Product updated!'); loadProducts(); } catch (e) { alert(e.message); } });
-document.getElementById('userForm').addEventListener('submit', async (e) => { e.preventDefault(); try { await apiCall('/users', 'POST', { name: document.getElementById('userNameInput').value, email: document.getElementById('userEmail').value, password: document.getElementById('userPassword').value, role: document.getElementById('userRoleSelect').value }); closeModal('userModal'); e.target.reset(); alert('User added!'); loadUsers(); } catch (e) { alert(e.message); } });
+document.getElementById('userForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('userNameInput').value.trim();
+    const email = document.getElementById('userEmail').value.trim();
+    const phone = document.getElementById('userPhone').value.trim();
+    const password = document.getElementById('userPassword').value;
+    const role = document.getElementById('userRoleSelect').value;
+    
+    if (!email && !phone) {
+        alert('Provide EITHER an Email OR a Phone number!');
+        return;
+    }
+    if (!password) {
+        alert('Password is required!');
+        return;
+    }
+    if (!role) {
+        alert('Please select a role!');
+        return;
+    }
+    
+    try {
+        await apiCall('/users', 'POST', {
+            name: name,
+            email: email || null,
+            phone: phone || null,
+            password: password,
+            role: role
+        });
+        closeModal('userModal');
+        e.target.reset();
+        alert('User added successfully!');
+        loadUsers();
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+});
 document.getElementById('stockForm').addEventListener('submit', async (e) => { e.preventDefault(); const productId = document.getElementById('stockProductId').value; const adjustment = parseInt(document.getElementById('stockAdjustment').value); const reason = document.getElementById('stockReason').value || 'manual'; try { await apiCall('/products/' + productId + '/stock?adjustment=' + adjustment + '&reason=' + reason, 'PUT'); closeModal('stockModal'); alert('Stock adjusted!'); loadProducts(); } catch (e) { alert(e.message); } });
 document.getElementById('poForm').addEventListener('submit', async (e) => { e.preventDefault(); try { await apiCall('/purchase-orders', 'POST', { supplier: document.getElementById('poSupplier').value, product_id: parseInt(document.getElementById('poProductId').value), quantity: parseInt(document.getElementById('poQuantity').value), unit_cost: parseFloat(document.getElementById('poUnitCost').value) }); closeModal('poModal'); e.target.reset(); alert('PO created!'); loadPurchaseOrders(); } catch (e) { alert(e.message); } });
 
