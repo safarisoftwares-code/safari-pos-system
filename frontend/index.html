@@ -21,6 +21,7 @@
                 <li><a onclick="showView('users')">Users</a></li>
                 <li><a onclick="showView('reports')">Reports</a></li>
                 <li><a onclick="showView('analytics')">Analytics</a></li>
+                <li><a onclick="showView('tax')">Tax</a></li>
                 <li><a onclick="showView('receipts')">Receipts</a></li>
                 <li><a onclick="showView('purchaseOrders')">Purchase Orders</a></li>
                 <li><a onclick="showView('backup')">Backup</a></li>
@@ -66,7 +67,7 @@
                             <div style="margin-bottom:3px;display:flex;align-items:center;gap:5px"><label style="font-size:10px;white-space:nowrap">Discount%:</label><input type="number" id="discountInput" value="0" style="width:60px;padding:2px;border:1px solid #ddd;border-radius:3px;font-size:11px"></div>
                             <div style="padding:1px 0">
                                 <div style="display:flex;justify-content:space-between;margin-bottom:2px;font-size:11px"><span>Subtotal:</span><span id="subtotal">KSh 0.00</span></div>
-                                <div style="display:flex;justify-content:space-between;margin-bottom:2px;font-size:11px"><span>Tax:</span><span id="tax">KSh 0.00</span></div>
+                                <div style="display:flex;justify-content:space-between;margin-bottom:2px;font-size:11px"><span>Tax:</span><span id="cartTax">KSh 0.00</span></div>
                                 <div style="display:flex;justify-content:space-between;margin-bottom:2px;font-size:11px"><span>Discount:</span><span id="discount">KSh 0.00</span></div>
                                 <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:bold;color:#8b4513"><span>TOTAL:</span><span id="total">KSh 0.00</span></div>
                             </div>
@@ -107,6 +108,36 @@
                 <div class="card"><h3 class="card-title">Profit Champions</h3><div class="data-table"><table style="width:100%"><thead><tr><th>#</th><th>Product</th><th>Profit</th><th>Margin</th></tr></thead><tbody id="profitChampionsBody"></tbody></table></div></div>
                 <div class="card"><h3 class="card-title">Loss Makers</h3><div class="data-table"><table style="width:100%"><thead><tr><th>#</th><th>Product</th><th>Loss</th><th>Margin</th></tr></thead><tbody id="lossMakersBody"></tbody></table></div></div>
                 <div class="card"><h3 class="card-title">Slow Movers</h3><div class="data-table"><table style="width:100%"><thead><tr><th>#</th><th>Product</th><th>Stock</th><th>Sold(30d)</th></tr></thead><tbody id="slowMoversBody"></tbody></table></div></div>
+            </div>
+
+            <div id="tax" class="view" style="display:none;">
+                <h2 style="margin-bottom: 20px;">Tax Collection Report</h2>
+                
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:20px">
+                    <div class="card"><h3 style="font-size:12px;color:#666">Today's Tax</h3><p style="font-size:22px;font-weight:bold;color:#2e7d32" id="todayTax">KSh 0.00</p></div>
+                    <div class="card"><h3 style="font-size:12px;color:#666">This Month</h3><p style="font-size:22px;font-weight:bold;color:#2e7d32" id="monthTax">KSh 0.00</p></div>
+                    <div class="card"><h3 style="font-size:12px;color:#666">This Year</h3><p style="font-size:22px;font-weight:bold;color:#2e7d32" id="yearTax">KSh 0.00</p></div>
+                    <div class="card"><h3 style="font-size:12px;color:#666">All Time</h3><p style="font-size:22px;font-weight:bold;color:#8b4513" id="totalTax">KSh 0.00</p></div>
+                </div>
+                
+                <div class="card">
+                    <h3 class="card-title">Recent Tax Transactions</h3>
+                    <div class="data-table"><table style="width:100%"><thead><tr><th>Receipt</th><th>Date</th><th>Product</th><th>Qty</th><th>Tax Rate</th><th>Tax Amount</th><th>Payment</th><th>Cashier</th></tr></thead><tbody id="taxTableBody"></tbody></table></div>
+                </div>
+            </div>
+
+            <div <div id="tax" class="view" style="display:none;">
+                <h2 style="margin-bottom:20px">Tax Collection Report</h2>
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:20px">
+                    <div class="card"><h3 style="font-size:12px;color:#666">Today</h3><p style="font-size:22px;font-weight:bold;color:#2e7d32" id="todayTax">KSh 0.00</p></div>
+                    <div class="card"><h3 style="font-size:12px;color:#666">This Month</h3><p style="font-size:22px;font-weight:bold;color:#2e7d32" id="monthTax">KSh 0.00</p></div>
+                    <div class="card"><h3 style="font-size:12px;color:#666">This Year</h3><p style="font-size:22px;font-weight:bold;color:#2e7d32" id="yearTax">KSh 0.00</p></div>
+                    <div class="card"><h3 style="font-size:12px;color:#666">All Time</h3><p style="font-size:22px;font-weight:bold;color:#8b4513" id="totalTax">KSh 0.00</p></div>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">Recent Tax Transactions</h3>
+                    <div class="data-table"><table style="width:100%"><thead><tr><th>Receipt</th><th>Date</th><th>Product</th><th>Qty</th><th>Tax Rate</th><th>Tax Amount</th><th>Payment</th><th>Cashier</th></tr></thead><tbody id="taxTableBody"></tbody></table></div>
+                </div>
             </div>
 
             <div id="receipts" class="view" style="display:none;">
@@ -233,5 +264,6 @@
     <script src="/static/js/app.js?v=3.0"></script>
     <script src="/static/js/main.js?v=3.0"></script>
     <script src="/static/js/analytics.js?v=3.0"></script>
+    <script src="/static/js/tax.js?v=3.0"></script>
 </body>
 </html>

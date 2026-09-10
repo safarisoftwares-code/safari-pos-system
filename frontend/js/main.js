@@ -26,6 +26,7 @@ function showView(viewName) {
     if (viewName === 'receipts') loadReceiptHistory();
     if (viewName === 'purchaseOrders') loadPurchaseOrders();
     if (viewName === 'analytics') { loadAnalytics(); loadExpiryReport(); }
+    if (viewName === 'tax') { loadTaxReport(); }
 }
 
 function openModal(id) { document.getElementById(id).classList.add('active'); }
@@ -190,7 +191,7 @@ function updateCart() {
         }).join('') || '<p style="color:#95a5a6;text-align:center;margin-top:50px">Cart is empty</p>';
     }
     document.getElementById('subtotal').textContent = 'KSh ' + subtotal.toFixed(2);
-    document.getElementById('tax').textContent = 'KSh ' + taxAmount.toFixed(2);
+    document.getElementById('cartTax').textContent = 'KSh ' + taxAmount.toFixed(2);
     document.getElementById('discount').textContent = '-KSh ' + discountAmount.toFixed(2);
     document.getElementById('total').textContent = 'KSh ' + total.toFixed(2);
 }
@@ -579,7 +580,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (user && user.role === 'cashier') {
         document.querySelectorAll('.sidebar-menu a').forEach(a => {
             const t = a.textContent.trim();
-            if (['Products','Categories','Users','Reports','Analytics','Purchase Orders','Backup','Settings'].includes(t)) {
+            if (['Products','Categories','Users','Reports','Analytics','Tax','Purchase Orders','Backup','Settings'].includes(t)) {
                 a.style.display = 'none';
             }
         });

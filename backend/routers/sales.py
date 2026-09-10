@@ -80,6 +80,34 @@ async def create_sale(sale_data: SaleCreate, current_user=Depends(get_current_us
     
     db.commit()
     
+    # Record tax in PERMANENT ledger
+    import sqlite3 as sql
+    import os as os_util
+    db_path = os_util.path.join(os_util.path.dirname(os_util.path.dirname(os_util.path.dirname(os_util.path.abspath(__file__)))), "database", "safaripos.db")
+    tax_conn = sql.connect(db_path)
+    tax_cursor = tax_conn.cursor()
+    
+    cashier_name = db.query(User).filter(User.id == current_user.id).first().name
+    
+    for item in sale_items_data:
+        tax_cursor.execute('''
+            INSERT INTO tax_ledger (receipt_no, product_name, quantity, unit_price, tax_rate, tax_amount, payment_method, cashier, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            sale.receipt_no,
+            item["product"].name,
+            item["quantity"],
+            item["unit_price"],
+            item["tax_rate"],
+            item["tax_amount"],
+            sale.payment_method,
+            cashier_name,
+            sale.created_at.strftime("%Y-%m-%d %H:%M:%S")
+        ))
+    
+    tax_conn.commit()
+    tax_conn.close()
+    
     return {
         "id": sale.id,
         "receipt_no": sale.receipt_no,
