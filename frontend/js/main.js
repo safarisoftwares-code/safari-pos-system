@@ -116,7 +116,7 @@ function openEditProductModal(productId) {
 }
 
 async function deleteProduct(id) {
-    if (prompt('Type DELETE to confirm:') !== 'DELETE') return;
+    if (prompt('Type DELETE to confirm (user will be deactivated):') !== 'DELETE') return;
     if (!confirm('Are you sure?')) return;
     try { await apiCall('/products/' + id, 'DELETE'); loadProducts(); } catch (e) { alert(e.message); }
 }
@@ -129,7 +129,7 @@ async function loadUsers() {
 }
 
 async function deleteUser(id) {
-    if (prompt('Type DELETE to confirm:') !== 'DELETE') return;
+    if (prompt('Type DELETE to confirm (user will be deactivated):') !== 'DELETE') return;
     if (!confirm('Deactivate?')) return;
     try { await apiCall('/users/' + id, 'DELETE'); loadUsers(); } catch (e) { alert(e.message); }
 }
@@ -869,7 +869,7 @@ async function deleteReceipt(receiptNo) {
 async function deleteSalesBefore() {
     const date = prompt('Delete all sales before (YYYY-MM-DD):');
     if (!date) return;
-    if (prompt('Type DELETE to confirm:') !== 'DELETE') return;
+    if (prompt('Type DELETE to confirm (user will be deactivated):') !== 'DELETE') return;
     if (!confirm('Delete ALL sales before ' + date + '?\n\nTax records will be KEPT.')) return;
     try {
         const result = await apiCall('/sales/delete-before/' + date, 'DELETE');

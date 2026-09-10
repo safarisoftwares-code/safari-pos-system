@@ -55,6 +55,7 @@ async def create_sale(sale_data: SaleCreate, current_user=Depends(get_current_us
         receipt_no=generate_receipt_no(db),
         customer_id=sale_data.customer_id,
         cashier_id=current_user.id,
+        cashier_name=current_user.name,
         subtotal=subtotal,
         tax_amount=total_tax,
         discount=discount,
@@ -151,7 +152,7 @@ async def get_today_sales(current_user=Depends(get_current_user), db: Session = 
                 "total_amount": s.total_amount,
                 "payment_method": s.payment_method,
                 "created_at": s.created_at.strftime("%H:%M:%S"),
-                "cashier": db.query(User).filter(User.id == s.cashier_id).first().name
+                "cashier": s.cashier_name or (db.query(User).filter(User.id == s.cashier_id).first().name if db.query(User).filter(User.id == s.cashier_id).first() else "Unknown")
             }
             for s in sales
         ]
@@ -172,7 +173,7 @@ async def get_all_sales(current_user=Depends(get_current_user), db: Session = De
             "total_amount": s.total_amount,
             "payment_method": s.payment_method,
             "created_at": s.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "cashier": db.query(User).filter(User.id == s.cashier_id).first().name
+            "cashier": s.cashier_name or (db.query(User).filter(User.id == s.cashier_id).first().name if db.query(User).filter(User.id == s.cashier_id).first() else "Unknown")
         }
         for s in sales
     ]

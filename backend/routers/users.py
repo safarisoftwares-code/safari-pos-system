@@ -86,9 +86,10 @@ async def delete_user(user_id: int, current_user=Depends(get_current_user), db: 
     admin_count = db.query(User).filter(User.role == "admin", User.is_active == True).count()
     if user.role == "admin" and admin_count <= 1:
         raise HTTPException(status_code=400, detail="Cannot delete the only admin account")
-    user.is_active = False
+    # PERMANENT DELETE - sales keep cashier_name so no broken references
+    db.delete(user)
     db.commit()
-    return {"message": "User deactivated successfully"}
+    return {"message": "User permanently deleted"}
 
 
 @router.put('/{user_id}/admin-edit')
