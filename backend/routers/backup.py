@@ -358,3 +358,89 @@ async def restore_data_only(filename: str, current_user=Depends(get_current_user
     target_conn.close()
     
     return {"message": "Data restored! Users and settings preserved.", "restored_tables": restored}
+
+
+@router.post("/restore-selective/{filename}")
+async def restore_selective(filename: str, tables: str = "", current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Restore only SELECTED tables from backup"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can restore backups")
+    
+    if ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    
+    selected_tables = [t.strip() for t in tables.split(",") if t.strip()]
+    if not selected_tables:
+        raise HTTPException(status_code=400, detail="No tables selected")
+    
+    # Whitelist of allowed tables
+    allowed = {"products", "categories", "tax_ledger", "sales", "sale_items", "purchase_orders"}
+    selected_tables = [t for t in selected_tables if t in allowed]
+    if not selected_tables:
+        raise HTTPException(status_code=400, detail="No valid tables selected")
+    
+    # Find backup
+    backup_path = None
+    ext_location = get_backup_location(db)
+    dirs_to_check = [BACKUP_DIR]
+    if ext_location and os.path.exists(ext_location):
+        dirs_to_check.append(ext_location)
+    
+    import string
+    desktop_folder = os.path.join(os.path.expanduser("~"), "Desktop", "Safari-POS Backup")
+    dirs_to_check.append(desktop_folder)
+    for letter in string.ascii_uppercase:
+        drive_folder = os.path.join(letter + ":\\", "Safari-POS Backup")
+        if os.path.exists(drive_folder):
+            dirs_to_check.append(drive_folder)
+    
+    for dir_path in dirs_to_check:
+        if os.path.exists(dir_path):
+            candidate = os.path.join(dir_path, filename)
+            if os.path.exists(candidate):
+                backup_path = candidate
+                break
+    
+    if not backup_path:
+        raise HTTPException(status_code=404, detail="Backup not found")
+    
+    # Safety backup
+    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "database", "safaripos.db")
+    shutil.copy2(db_path, db_path + ".pre_selective_restore")
+    
+    import sqlite3
+    source = sqlite3.connect(backup_path)
+    target = sqlite3.connect(db_path)
+    src_cur = source.cursor()
+    tgt_cur = target.cursor()
+    
+    restored = []
+    for table in selected_tables:
+        try:
+            src_cur.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'")
+            if not src_cur.fetchone():
+                continue
+            
+            tgt_cur.execute(f"PRAGMA table_info({table})")
+            tgt_cols = [c[1] for c in tgt_cur.fetchall()]
+            src_cur.execute(f"PRAGMA table_info({table})")
+            src_cols = [c[1] for c in src_cur.fetchall()]
+            common = [c for c in tgt_cols if c in src_cols]
+            if not common:
+                continue
+            
+            tgt_cur.execute(f"DELETE FROM {table}")
+            cols_str = ", ".join(common)
+            src_cur.execute(f"SELECT {cols_str} FROM {table}")
+            rows = src_cur.fetchall()
+            if rows:
+                ph = ", ".join(["?"] * len(common))
+                tgt_cur.executemany(f"INSERT INTO {table} ({cols_str}) VALUES ({ph})", rows)
+            restored.append(f"{table} ({len(rows)})")
+        except Exception as e:
+            print(f"Warning {table}: {e}")
+    
+    target.commit()
+    source.close()
+    target.close()
+    return {"message": "Selective restore complete", "restored_tables": restored}

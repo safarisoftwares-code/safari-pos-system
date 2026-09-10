@@ -898,3 +898,49 @@ async function restoreDataOnly() {
         alert(result.message + "\n\nRestored: " + (result.restored_tables || []).join(", "));
     } catch (e) { alert("Error: " + e.message); }
 }
+
+
+function openSelectiveRestoreModal() {
+    const fileInput = document.getElementById("restoreFileInput");
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert("Select a backup file first!");
+        return;
+    }
+    openModal("selectiveRestoreModal");
+}
+
+
+async function restoreSelective() {
+    const fileInput = document.getElementById("restoreFileInput");
+    const filename = fileInput.files[0].name;
+    
+    const tables = [];
+    if (document.getElementById("sel_products").checked) tables.push("products");
+    if (document.getElementById("sel_categories").checked) tables.push("categories");
+    if (document.getElementById("sel_tax_ledger").checked) tables.push("tax_ledger");
+    if (document.getElementById("sel_sales").checked) { tables.push("sales"); tables.push("sale_items"); }
+    if (document.getElementById("sel_purchase_orders").checked) tables.push("purchase_orders");
+    
+    if (tables.length === 0) {
+        alert("Select at least ONE table to restore!");
+        return;
+    }
+    
+    if (prompt("Type SELECTIVE-RESTORE to confirm:\n\nTables: " + tables.join(", ")) !== "SELECTIVE-RESTORE") return;
+    
+    try {
+        const result = await apiCall("/backup/restore-selective/" + filename + "?tables=" + encodeURIComponent(tables.join(",")), "POST");
+        alert(result.message + "\n\nRestored: " + (result.restored_tables || []).join(", "));
+        closeModal("selectiveRestoreModal");
+    } catch (e) { alert("Error: " + e.message); }
+}
+
+
+async function generateRecoveryCode() {
+    if (!confirm("This will REPLACE any existing recovery code.\n\nContinue?")) return;
+    
+    try {
+        const result = await apiCall("/settings/generate-recovery-code", "POST");
+        prompt("RECOVERY CODE - COPY THIS NOW!\n\n(Ctrl+C to copy)", result.code);
+    } catch (e) { alert("Error: " + e.message); }
+}

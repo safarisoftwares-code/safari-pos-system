@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Safari POS System</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=7.0">
+    <link rel="stylesheet" href="/static/css/style.css?v=9.0">
 </head>
 <body>
     <div class="dashboard-container">
@@ -154,7 +154,7 @@
                 <div class="card" style="margin-bottom:20px"><h3 class="card-title">Create Backup</h3><button class="btn btn-primary" onclick="createBackup()" style="width:auto;padding:10px 20px">Create Backup</button></div>
                 <div class="card" style="margin-bottom:20px"><h3 class="card-title">System Restore</h3><p style="font-size:12px;color:#666">Select a backup file to restore.</p>
                     <input type="file" id="restoreFileInput" accept=".db" style="margin-bottom:10px;padding:8px;border:1px solid #ddd;border-radius:5px;width:100%">
-                    <button class="btn btn-primary" onclick="restoreSelectedFile()" style="width:auto;padding:8px 15px">Restore Selected File (Full)</button> <button class="btn btn-secondary" onclick="restoreDataOnly()" style="width:auto;padding:8px 15px;background:#2e7d32;color:white;border:none;border-radius:5px;cursor:pointer">Restore DATA Only (Keep Users)</button>
+                    <button class="btn btn-primary" onclick="restoreSelectedFile()" style="width:auto;padding:8px 15px">Restore Selected File (Full)</button> <button class="btn btn-secondary" onclick="restoreDataOnly()" style="width:auto;padding:8px 15px;background:#2e7d32;color:white;border:none;border-radius:5px;cursor:pointer">Restore DATA Only (Keep Users)</button> <button class="btn btn-secondary" onclick="openSelectiveRestoreModal()" style="width:auto;padding:8px 15px;background:#8b4513;color:white;border:none;border-radius:5px;cursor:pointer">Restore Selective</button>
                 </div>
                 
             </div>
@@ -177,6 +177,8 @@
                 
                 <div class="card" style="border: 2px solid #d32f2f;">
                     <h3 class="card-title" style="color:#d32f2f;">Danger Zone</h3>
+                    <p style="font-size:12px;color:#666">Generate a recovery code that lets you reset a forgotten admin password. Store it safely offline.</p>
+                    <button onclick="generateRecoveryCode()" style="background:#2e7d32;color:white;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;font-size:14px;margin-bottom:10px">Generate Recovery Code</button>
                     <p style="font-size:12px;color:#666">Clear all demo/test data before giving to a real client. Keeps admin account and settings.</p>
                     <button onclick="resetDemoData()" style="background:#d32f2f;color:white;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;font-size:14px">Reset Demo Data</button>
                 </div>
@@ -267,13 +269,35 @@
         <div style="display:flex;gap:10px"><button type="submit" class="btn btn-primary" style="flex:1">Create PO</button><button type="button" class="btn btn-danger" onclick="closeModal('poModal')" style="flex:1">Cancel</button></div>
     </form></div></div>
 
-    <script src="/static/js/auth.js?v=7.0"></script>
-    <script src="/static/js/app.js?v=7.0"></script>
-    <script src="/static/js/main.js?v=7.0"></script>
-    <script src="/static/js/analytics.js?v=7.0"></script>
-    <script src="/static/js/tax.js?v=7.0"></script>
+    
+    <div id="selectiveRestoreModal" class="modal">
+        <div class="modal-content">
+            <h3>Selective Restore</h3>
+            <p style="font-size:12px;color:#666">Choose which data to restore from the backup. Selected tables will be REPLACED with backup data.</p>
+            <div style="margin:15px 0">
+                <div class="form-group"><label><input type="checkbox" id="sel_products"> Products</label></div>
+                <div class="form-group"><label><input type="checkbox" id="sel_categories"> Categories</label></div>
+                <div class="form-group"><label><input type="checkbox" id="sel_tax_ledger"> Tax Ledger</label></div>
+                <div class="form-group"><label><input type="checkbox" id="sel_sales"> Sales &amp; Receipts</label></div>
+                <div class="form-group"><label><input type="checkbox" id="sel_purchase_orders"> Purchase Orders</label></div>
+            </div>
+            <div style="display:flex;gap:10px">
+                <button class="btn btn-primary" onclick="restoreSelective()" style="flex:1">Restore Selected</button>
+                <button class="btn btn-danger" onclick="closeModal('selectiveRestoreModal')" style="flex:1">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/auth.js?v=9.0"></script>
+    <script src="/static/js/app.js?v=9.0"></script>
+    <script src="/static/js/main.js?v=9.0"></script>
+    <script src="/static/js/analytics.js?v=9.0"></script>
+    <script src="/static/js/tax.js?v=9.0"></script>
 </body>
 </html>
+
+
+
 
 
 
