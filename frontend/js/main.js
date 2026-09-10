@@ -344,16 +344,73 @@ async function loadProductsForPO() {
 
 async function loadPurchaseOrders() {
     try {
-        const pos = await apiCall('/purchase-orders');
+        const grouped = await apiCall('/purchase-orders/by-date');
         const tbody = document.getElementById('poTableBody');
-        if (tbody) { tbody.innerHTML = pos.map(po => {
-                let actions = '';
-                if (po.status === 'pending') {
-                    actions += '<button onclick="updatePOStatus(' + po.id + ',\'received\')" style="padding:5px 10px;font-size:10px;margin-right:3px;background:#2e7d32;color:white;border:none;border-radius:3px">Receive</button>';
-                }
-                actions += '<button onclick="deletePO(' + po.id + ')" style="padding:5px 10px;font-size:10px;color:red">Delete</button>';
-                return '<tr><td>' + po.id + '</td><td>' + po.supplier + '</td><td>' + po.product_name + '</td><td>' + (po.unit || '-') + '</td><td>' + po.quantity + '</td><td>KSh ' + po.unit_cost + '</td><td>KSh ' + po.total_cost + '</td><td>' + po.status.toUpperCase() + '</td><td>' + actions + '</td></tr>';
-            }).join('') || '<tr><td colspan="9">No POs</td></tr>'; }
+        if (!tbody) return;
+        
+        let html = '';
+        const dates = Object.keys(grouped).sort().reverse();
+        
+        if (dates.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10">No POs</td></tr>';
+            return;
+        }
+        
+        dates.forEach(date => {
+            const pos = grouped[date];
+            const dayTotal = pos.reduce((sum, p) => sum + p.total_cost, 0);
+            
+            // Date header row
+            html += '<tr style="background:#f5e6d3;font-weight:bold"><td colspan="7">📅 ' + date + ' — ' + pos.length + ' POs — Total: KSh ' + dayTotal.toFixed(2) + '</td><td colspan="3" style="text-align:right"><button onclick="printPODay(\'' + date + '\')" style="background:#0088cc;color:white;padding:4px 10px;border:none;border-radius:3px;cursor:pointer;font-size:11px;margin-right:5px">Print Day</button><button onclick="deletePODay(\'' + date + '\')" style="background:#d32f2f;color:white;padding:4px 10px;border:none;border-radius:3px;cursor:pointer;font-size:11px">Delete Day</button></td></tr>';
+            
+            // PO rows
+            pos.forEach(po => {
+                html += '<tr><td>' + po.id + '</td><td>' + po.supplier + '</td><td>' + po.product_name + '</td><td>' + (po.unit || '-') + '</td><td>' + po.quantity + '</td><td>KSh ' + po.unit_cost + '</td><td>KSh ' + po.total_cost + '</td><td>' + po.status.toUpperCase() + '</td><td>' + (po.status === 'pending' ? '<button onclick="updatePOStatus(' + po.id + ',\'received\')" style="padding:3px 8px;font-size:11px">Receive</button>' : '-') + '</td><td><button onclick="deletePO(' + po.id + ')" style="color:red;padding:3px 8px;font-size:11px">Delete</button></td></tr>';
+            });
+        });
+        
+        tbody.innerHTML = html;
+    } catch (e) { alert(e.message); }
+}
+
+async function printPODay(date) {
+    try {
+        const pos = await apiCall('/purchase-orders/by-date/' + date);
+        if (pos.length === 0) { alert('No POs for this date'); return; }
+        
+        let itemsHtml = '';
+        let total = 0;
+        pos.forEach(p => {
+            itemsHtml += '<tr><td>' + p.id + '</td><td>' + p.supplier + '</td><td>' + p.product_name + ' ' + (p.unit || '') + '</td><td>' + p.quantity + '</td><td>KSh ' + p.unit_cost + '</td><td>KSh ' + p.total_cost + '</td></tr>';
+            total += p.total_cost;
+        });
+        
+        const html = '<!DOCTYPE html><html><head><title>PO Report ' + date + '</title><style>body{font-family:Arial,sans-serif;padding:20px}h2{text-align:center}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#8b4513;color:white}.total{font-weight:bold;background:#f5e6d3}</style></head><body><h2>Purchase Orders Report</h2><p style="text-align:center">Date: ' + date + '</p><table><thead><tr><th>ID</th><th>Supplier</th><th>Product</th><th>Qty</th><th>Unit Cost</th><th>Total</th></tr></thead><tbody>' + itemsHtml + '<tr class="total"><td colspan="5">TOTAL</td><td>KSh ' + total.toFixed(2) + '</td></tr></tbody></table></body></html>';
+        
+        const pw = window.open('', 'POReport', 'width=800,height=600');
+        pw.document.write(html);
+        pw.document.close();
+        setTimeout(() => { try { pw.print(); } catch(e) {} }, 500);
+    } catch (e) { alert(e.message); }
+}
+
+async function deletePODay(date) {
+    if (prompt('Type DELETE to remove ALL POs for ' + date + ':') !== 'DELETE') return;
+    if (!confirm('Delete all POs for ' + date + '?')) return;
+    try {
+        const result = await apiCall('/purchase-orders/delete-day/' + date, 'DELETE');
+        alert(result.message);
+        loadPurchaseOrders();
+    } catch (e) { alert(e.message); }
+}
+
+async function deletePO(id) {
+    if (prompt('Type DELETE to remove PO #' + id + ':') !== 'DELETE') return;
+    if (!confirm('Delete PO #' + id + '?')) return;
+    try {
+        await apiCall('/purchase-orders/' + id, 'DELETE');
+        alert('PO deleted');
+        loadPurchaseOrders();
     } catch (e) { alert(e.message); }
 }
 

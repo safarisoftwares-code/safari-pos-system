@@ -15,6 +15,107 @@ class PurchaseOrderCreate(BaseModel):
     quantity: int
     unit_cost: float
 
+@router.get("/by-date")
+async def get_pos_by_date(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get all POs grouped by date"""
+    if current_user.role not in ["admin", "manager"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    pos = db.query(PurchaseOrder).order_by(PurchaseOrder.created_at.desc()).all()
+    
+    grouped = {}
+    for po in pos:
+        date_key = po.created_at.strftime("%Y-%m-%d")
+        if date_key not in grouped:
+            grouped[date_key] = []
+        grouped[date_key].append({
+            "id": po.id,
+            "supplier": po.supplier,
+            "product_name": po.product_name,
+            "unit": po.unit,
+            "quantity": po.quantity,
+            "unit_cost": po.unit_cost,
+            "total_cost": po.total_cost,
+            "status": po.status
+        })
+    
+    return grouped
+
+@router.get("/by-date/{date}")
+async def get_pos_for_date(date: str, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get POs for a specific date"""
+    if current_user.role not in ["admin", "manager"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    from datetime import datetime, timedelta
+    try:
+        start = datetime.strptime(date, "%Y-%m-%d")
+    except:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    end = start + timedelta(days=1)
+    
+    pos = db.query(PurchaseOrder).filter(
+        PurchaseOrder.created_at >= start,
+        PurchaseOrder.created_at < end
+    ).order_by(PurchaseOrder.created_at.desc()).all()
+    
+    return [
+        {
+            "id": p.id,
+            "supplier": p.supplier,
+            "product_name": p.product_name,
+            "unit": p.unit,
+            "quantity": p.quantity,
+            "unit_cost": p.unit_cost,
+            "total_cost": p.total_cost,
+            "status": p.status,
+            "created_at": p.created_at.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        for p in pos
+    ]
+
+@router.delete("/delete-day/{date}")
+async def delete_pos_by_date(date: str, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Delete all POs for a specific date"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can delete POs")
+    
+    from datetime import datetime, timedelta
+    try:
+        start = datetime.strptime(date, "%Y-%m-%d")
+    except:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    end = start + timedelta(days=1)
+    
+    pos = db.query(PurchaseOrder).filter(
+        PurchaseOrder.created_at >= start,
+        PurchaseOrder.created_at < end
+    ).all()
+    
+    count = len(pos)
+    for po in pos:
+        db.delete(po)
+    
+    db.commit()
+    return {"message": f"Deleted {count} POs for {date}"}
+
+
+@router.delete("/{po_id}")
+async def delete_po(po_id: int, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role not in ["admin", "manager"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
+    if not po:
+        raise HTTPException(status_code=404, detail="PO not found")
+    
+    db.delete(po)
+    db.commit()
+    return {"message": f"PO #{po_id} deleted"}
+
+
 @router.post("/")
 async def create_po(po_data: PurchaseOrderCreate, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.role not in ["admin", "manager"]:
@@ -105,3 +206,5 @@ async def delete_po(po_id: int, current_user=Depends(get_current_user), db: Sess
     db.delete(po)
     db.commit()
     return {"message": "PO deleted"}
+
+
