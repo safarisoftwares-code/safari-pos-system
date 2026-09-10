@@ -230,3 +230,46 @@ async def restore_file(file: UploadFile = File(...), current_user=Depends(get_cu
         f.write(content)
     
     return {"message": "Database restored successfully! Restart server to apply."}
+
+
+@router.post("/reset-demo")
+async def reset_demo_data(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can reset data")
+    
+    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "database", "safaripos.db")
+    
+    # SAFETY: Create backup before reset
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safety_backup = os.path.join(BACKUP_DIR, f"pre_reset_backup_{timestamp}.db")
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    shutil.copy2(db_path, safety_backup)
+    
+    # Clear demo data (keep admin user + settings)
+    import sqlite3 as sql
+    conn = sql.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Delete data from tables
+    cursor.execute("DELETE FROM sale_items")
+    cursor.execute("DELETE FROM sales")
+    cursor.execute("DELETE FROM tax_ledger")
+    cursor.execute("DELETE FROM purchase_orders")
+    cursor.execute("DELETE FROM products")
+    cursor.execute("DELETE FROM categories")
+    cursor.execute("DELETE FROM customers")
+    
+    # Keep admin user only - delete non-admin users
+    cursor.execute("DELETE FROM users WHERE role != 'admin'")
+    
+    # Reset auto-increment counters
+    cursor.execute("DELETE FROM sqlite_sequence WHERE name IN ('products', 'sales', 'sale_items', 'categories', 'customers', 'purchase_orders', 'tax_ledger')")
+    
+    conn.commit()
+    conn.close()
+    
+    return {
+        "message": "Demo data cleared successfully",
+        "backup_created": safety_backup,
+        "cleared": ["products", "categories", "sales", "tax_ledger", "purchase_orders", "customers", "non-admin users"]
+    }

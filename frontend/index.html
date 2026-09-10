@@ -174,6 +174,12 @@
                 <div class="card"><h3 class="card-title">M-Pesa Configuration (Optional)</h3><p style="font-size:13px;color:#666">Cash works without M-Pesa.</p><div class="form-group"><label><input type="checkbox" id="mpesaEnabled"> Enable M-Pesa</label></div><div class="form-group"><label>Consumer Key</label><input type="text" id="mpesaConsumerKey"></div><div class="form-group"><label>Consumer Secret</label><input type="text" id="mpesaConsumerSecret"></div><div class="form-group"><label>Passkey</label><input type="text" id="mpesaPasskey"></div><div class="form-group"><label>Shortcode</label><input type="text" id="mpesaShortcode"></div><button class="btn btn-primary" onclick="saveMpesaSettings()" style="width:auto;padding:10px 20px">Save M-Pesa</button></div>
                 <div class="card"><h3 class="card-title">Expiry Protection</h3><div class="form-group"><label><input type="checkbox" id="blockExpired"> Block expired items</label></div><div class="form-group"><label><input type="checkbox" id="warnExpiring"> Warn expiring soon</label></div><button class="btn btn-primary" onclick="saveExpirySettings()" style="width:auto;padding:10px 20px">Save Expiry Settings</button></div>
                 <div class="card"><h3 class="card-title">Tax Rate</h3><div class="form-group"><label>Default Tax Rate (%)</label><input type="number" id="defaultTaxRate" value="16"></div><button class="btn btn-primary" onclick="updateTaxRate()" style="width:auto;padding:10px 20px">Save Tax Rate</button></div>
+                
+                <div class="card" style="border: 2px solid #d32f2f;">
+                    <h3 class="card-title" style="color:#d32f2f;">Danger Zone</h3>
+                    <p style="font-size:12px;color:#666">Clear all demo/test data before giving to a real client. Keeps admin account and settings.</p>
+                    <button onclick="resetDemoData()" style="background:#d32f2f;color:white;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;font-size:14px">Reset Demo Data</button>
+                </div>
             </div>
         </div>
     </div>

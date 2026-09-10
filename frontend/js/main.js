@@ -735,3 +735,17 @@ async function reprintReceipt(receiptNo) {
         
     } catch (e) { alert(e.message); }
 }
+
+
+async function resetDemoData() {
+    if (prompt('Type RESET to clear ALL demo data:') !== 'RESET') {
+        alert('Reset cancelled.');
+        return;
+    }
+    if (!confirm('FINAL WARNING: This will DELETE all products, sales, categories, tax records, and non-admin users.\n\nAdmin account and settings will be kept.\n\nA backup will be created automatically.\n\nContinue?')) return;
+    
+    try {
+        const result = await apiCall('/backup/reset-demo', 'POST');
+        alert('Demo data cleared successfully!\n\nBackup saved to:\n' + result.backup_created + '\n\nRestart the server now.');
+    } catch (e) { alert(e.message); }
+}
