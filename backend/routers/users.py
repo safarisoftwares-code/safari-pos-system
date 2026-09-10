@@ -10,9 +10,12 @@ router = APIRouter()
 
 @router.get("/", response_model=List[UserResponse])
 async def get_users(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Only admin can view users")
-    return db.query(User).filter(User.is_active == True).all()
+    if current_user.role == "admin":
+        return db.query(User).filter(User.is_active == True).all()
+    elif current_user.role == "manager":
+        return db.query(User).filter(User.is_active == True, User.role == "cashier").all()
+    else:
+        raise HTTPException(status_code=403, detail="Only admin or manager can view users")
 
 @router.post("/", response_model=UserResponse)
 async def create_user(user_data: UserCreate, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
@@ -94,11 +97,13 @@ async def delete_user(user_id: int, current_user=Depends(get_current_user), db: 
 
 @router.put('/{user_id}/admin-edit')
 async def admin_edit_user(user_id: int, data: dict, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.role != 'admin':
-        raise HTTPException(status_code=403, detail='Only admin can edit users')
+    if current_user.role not in ['admin', 'manager']:
+        raise HTTPException(status_code=403, detail='Only admin or manager can edit users')
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail='User not found')
+    if current_user.role == 'manager' and user.role != 'cashier':
+        raise HTTPException(status_code=403, detail='Managers can only edit cashiers')
     if 'name' in data and data['name']:
         user.name = data['name']
     if 'email' in data and data['email']:
@@ -114,6 +119,8 @@ async def admin_edit_user(user_id: int, data: dict, current_user=Depends(get_cur
     if 'password' in data and data['password']:
         user.password_hash = hash_password(data['password'])
     if 'role' in data and data['role']:
+        if current_user.role != 'admin':
+            raise HTTPException(status_code=403, detail='Only admin can change roles')
         user.role = data['role']
     db.commit()
     db.refresh(user)

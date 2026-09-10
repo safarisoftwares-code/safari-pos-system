@@ -124,8 +124,48 @@ async function deleteProduct(id) {
 async function loadUsers() {
     try {
         const users = await apiCall('/users');
-        document.getElementById('usersTableBody').innerHTML = users.map(u => '<tr><td>' + u.id + '</td><td>' + u.name + '</td><td>' + u.email + '</td><td>' + u.role.toUpperCase() + '</td><td><button onclick="deleteUser(' + u.id + ')" style="padding:5px 10px;font-size:10px;color:red">Remove</button></td></tr>').join('');
+        const currentUser = authManager.getUser();
+        document.getElementById('usersTableBody').innerHTML = users.map(u => {
+            const isSelf = currentUser && u.id === currentUser.id;
+            const isAdmin = currentUser && currentUser.role === 'admin';
+            const isManager = currentUser && currentUser.role === 'manager';
+            let actions = '';
+            
+            const canEdit = isAdmin || (isManager && u.role === 'cashier');
+            if (canEdit) {
+                actions += '<button onclick="openEditUserModal(' + u.id + ')" style="padding:5px 10px;font-size:10px;margin-right:3px;background:#2e7d32;color:white;border:none;border-radius:3px">Edit</button>';
+            }
+            
+            const canDelete = isAdmin && !isSelf && (u.role !== 'admin' || users.filter(x => x.role === 'admin').length > 1);
+            if (canDelete) {
+                actions += '<button onclick="deleteUser(' + u.id + ')" style="padding:5px 10px;font-size:10px;color:red">Remove</button>';
+            } else if (isSelf) {
+                actions += '<span style="color:#999;font-size:9px">You</span>';
+            }
+            
+            return '<tr><td>' + u.id + '</td><td>' + u.name + '</td><td>' + (u.email || '-') + '</td><td>' + u.role.toUpperCase() + '</td><td>' + actions + '</td></tr>';
+        }).join('') || '<tr><td colspan="5">No users</td></tr>';
     } catch (e) { alert(e.message); }
+}
+
+
+function openEditUserModal(userId) {
+    apiCall('/users').then(users => {
+        const user = users.find(u => u.id === userId);
+        if (!user) { alert('User not found'); return; }
+        
+        document.getElementById('editUserId').value = userId;
+        document.getElementById('editUserName').value = user.name || '';
+        document.getElementById('editUserEmail').value = user.email || '';
+        document.getElementById('editUserPhone').value = user.phone || '';
+        document.getElementById('editUserPassword').value = '';
+        document.getElementById('editUserRole').value = user.role || 'cashier';
+        
+        const currentUser = authManager.getUser();
+        document.getElementById('editUserRoleGroup').style.display = (currentUser.role === 'admin') ? 'block' : 'none';
+        
+        openModal('editUserModal');
+    }).catch(e => alert(e.message));
 }
 
 async function deleteUser(id) {
@@ -278,7 +318,7 @@ function printReceipt(sale) {
         const taxLabel = (item.tax_rate || 0) > 0 ? 'A' : 'B';
         itemsHtml += '<tr><td>' + item.name + (item.unit ? ' (' + item.unit + ')' : '') + '</td><td style="text-align:center">' + item.quantity + '</td><td style="text-align:center;font-weight:bold">' + taxLabel + '</td><td style="text-align:right">' + item.total_price.toFixed(2) + '</td></tr>';
     });
-    const html = '<!DOCTYPE html><html><head><title>Receipt</title><style>body{font-family:"Courier New",monospace;padding:20px;max-width:300px;margin:auto}.header{text-align:center;margin-bottom:15px}.header h2{margin:0;font-size:18px}.header p{margin:2px 0;font-size:10px}hr{border:none;border-top:1px dashed #000;margin:10px 0}table{width:100%;font-size:10px;border-collapse:collapse}td{padding:3px 0}.total-row{font-weight:bold;font-size:9px}.footer{text-align:center;margin-top:15px;font-size:9px}.close-btn{display:block;margin:20px auto;padding:10px 20px;background:#8b4513;color:white;border:none;border-radius:5px;cursor:pointer}@media print{.close-btn{display:none}}</style></head><body><div class="header"><h2>' + (businessSettings ? businessSettings.business_name : '') + '</h2>' + (businessSettings && businessSettings.business_po_box ? '<p>' + businessSettings.business_po_box + '</p>' : '') + (businessSettings && businessSettings.business_location ? '<p>' + businessSettings.business_location + '</p>' : '') + (businessSettings && businessSettings.business_tax_pin ? '<p>PIN: ' + businessSettings.business_tax_pin + '</p>' : '') + (businessSettings && businessSettings.business_phone ? '<p>Tel: ' + businessSettings.business_phone + '</p>' : '') + '</div><hr><p style="font-size:10px">Receipt: ' + sale.receipt_no + '</p><p style="font-size:10px">Date: ' + new Date(sale.created_at).toLocaleString() + '</p><hr><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:center">Tax</th><th style="text-align:right">Amount</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><hr><table><tr><td>Subtotal:</td><td style="text-align:right">' + sale.subtotal.toFixed(2) + '</td></tr><tr><td>Tax (incl.):</td><td style="text-align:right">' + sale.tax_amount.toFixed(2) + '</td></tr><tr class="total-row"><td>TOTAL:</td><td style="text-align:right">KSh ' + sale.total_amount.toFixed(2) + '</td></tr></table><hr><p style="font-size:10px">Payment: ' + sale.payment_method.toUpperCase() + '</p><div class="footer"><p>' + (businessSettings ? businessSettings.receipt_footer : '') + '</p><hr><p style="font-size:9px">A = Taxable | B = Non-Taxable</p></div><button class="close-btn" onclick="window.close()">Close</button></body></html>';
+    const html = '<!DOCTYPE html><html><head><title>Receipt</title><style>body{font-family:"Courier New",monospace;padding:20px;max-width:300px;margin:auto}.header{text-align:center;margin-bottom:15px}.header h2{margin:0;font-size:18px}.header p{margin:2px 0;font-size:10px}hr{border:none;border-top:1px dashed #000;margin:10px 0}table{width:100%;font-size:10px;border-collapse:collapse}td{padding:3px 0}.total-row{font-weight:bold;font-size:9px}.footer{text-align:center;margin-top:15px;font-size:9px}.close-btn{display:block;margin:20px auto;padding:10px 20px;background:#8b4513;color:white;border:none;border-radius:5px;cursor:pointer}@media print{.close-btn{display:none}}</style></head><body><div class="header"><h2>' + (businessSettings ? businessSettings.business_name : '') + '</h2>' + (businessSettings && businessSettings.business_po_box ? '<p>' + businessSettings.business_po_box + '</p>' : '') + (businessSettings && businessSettings.business_location ? '<p>' + businessSettings.business_location + '</p>' : '') + (businessSettings && businessSettings.business_tax_pin ? '<p>PIN: ' + businessSettings.business_tax_pin + '</p>' : '') + (businessSettings && businessSettings.business_phone ? '<p>Tel: ' + businessSettings.business_phone + '</p>' : '') + '</div><hr><p style="font-size:10px">Receipt: ' + sale.receipt_no + '</p><p style="font-size:10px">Date: ' + new Date(sale.created_at).toLocaleString() + '</p><hr><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:center">Tax</th><th style="text-align:right">Amount</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><hr><table><tr><td>Subtotal:</td><td style="text-align:right">' + sale.subtotal.toFixed(2) + '</td></tr><tr><td>Tax (incl.):</td><td style="text-align:right">' + sale.tax_amount.toFixed(2) + '</td></tr><tr class="total-row"><td>TOTAL:</td><td style="text-align:right">KSh ' + sale.total_amount.toFixed(2) + '</td></tr></table><hr><p style="font-size:10px">Payment: ' + sale.payment_method.toUpperCase() + '</p><p style="font-size:10px">Served by: ' + (authManager.getUser() ? authManager.getUser().name : 'N/A') + '</p><div class="footer"><p>' + (businessSettings ? businessSettings.receipt_footer : '') + '</p><hr><p style="font-size:9px">A = Taxable | B = Non-Taxable</p></div><button class="close-btn" onclick="window.close()">Close</button></body></html>';
     const pw = window.open('', 'Receipt', 'width=400,height=600');
     pw.document.write(html); pw.document.close();
     setTimeout(() => { try { pw.print(); } catch(e) {} }, 1000);
@@ -685,9 +725,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 
-async 
-
-
 async function loadBackupLocation() {
     try {
         const settings = await apiCall('/settings');
@@ -819,7 +856,7 @@ async function reprintReceipt(receiptNo) {
             itemsHtml += '<tr><td>' + item.name + '</td><td style="text-align:center">' + item.quantity + '</td><td style="text-align:center;font-weight:bold">' + taxLabel + '</td><td style="text-align:right">' + item.total_price.toFixed(2) + '</td></tr>';
         });
         
-        const html = '<!DOCTYPE html><html><head><title>Reprint ' + receipt.receipt_no + '</title><style>body{font-family:"Courier New",monospace;padding:20px;max-width:300px;margin:auto}.h{text-align:center;margin-bottom:10px}.h h2{margin:0;font-size:16px}.h p{margin:2px 0;font-size:11px}.stamp{text-align:center;background:#fff3cd;border:2px solid #ffc107;padding:8px;margin:10px 0}.stamp strong{color:#d32f2f;font-size:13px}hr{border:none;border-top:1px dashed #000;margin:10px 0}table{width:100%;font-size:12px;border-collapse:collapse}td{padding:3px 0}.tr{font-weight:bold;font-size:14px}.cb{display:block;margin:20px auto;padding:10px 20px;background:#8b4513;color:white;border:none;border-radius:5px;cursor:pointer}@media print{.cb{display:none}}</style></head><body><div class="h"><h2>' + (settings.business_name || 'Folksmed Supppliers') + '</h2>' + (settings.business_po_box ? '<p>' + settings.business_po_box + '</p>' : '') + (settings.business_location ? '<p>' + settings.business_location + '</p>' : '') + (settings.business_phone ? '<p>Tel: ' + settings.business_phone + '</p>' : '') + '</div><hr><div class="stamp"><strong>*** REPRINTED COPY ***</strong></div><hr><p style="font-size:12px">Receipt: ' + receipt.receipt_no + '</p><p style="font-size:12px">Date: ' + receipt.created_at + '</p><hr><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:center">Tax</th><th style="text-align:right">Amount</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><hr><table><tr><td>Subtotal:</td><td style="text-align:right">' + receipt.subtotal.toFixed(2) + '</td></tr><tr><td>Tax (incl.):</td><td style="text-align:right">' + receipt.tax_amount.toFixed(2) + '</td></tr><tr class="tr"><td>TOTAL:</td><td style="text-align:right">KSh ' + receipt.total_amount.toFixed(2) + '</td></tr></table><hr><p style="font-size:12px">Payment: ' + receipt.payment_method.toUpperCase() + '</p><button class="cb" onclick="window.close()">Close</button></body></html>';
+        const html = '<!DOCTYPE html><html><head><title>Reprint ' + receipt.receipt_no + '</title><style>body{font-family:"Courier New",monospace;padding:20px;max-width:300px;margin:auto}.h{text-align:center;margin-bottom:10px}.h h2{margin:0;font-size:16px}.h p{margin:2px 0;font-size:11px}.stamp{text-align:center;background:#fff3cd;border:2px solid #ffc107;padding:8px;margin:10px 0}.stamp strong{color:#d32f2f;font-size:13px}hr{border:none;border-top:1px dashed #000;margin:10px 0}table{width:100%;font-size:12px;border-collapse:collapse}td{padding:3px 0}.tr{font-weight:bold;font-size:14px}.cb{display:block;margin:20px auto;padding:10px 20px;background:#8b4513;color:white;border:none;border-radius:5px;cursor:pointer}@media print{.cb{display:none}}</style></head><body><div class="h"><h2>' + (settings.business_name || 'Folksmed Supppliers') + '</h2>' + (settings.business_po_box ? '<p>' + settings.business_po_box + '</p>' : '') + (settings.business_location ? '<p>' + settings.business_location + '</p>' : '') + (settings.business_phone ? '<p>Tel: ' + settings.business_phone + '</p>' : '') + '</div><hr><div class="stamp"><strong>*** REPRINTED COPY ***</strong></div><hr><p style="font-size:12px">Receipt: ' + receipt.receipt_no + '</p><p style="font-size:12px">Date: ' + receipt.created_at + '</p><hr><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:center">Tax</th><th style="text-align:right">Amount</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><hr><table><tr><td>Subtotal:</td><td style="text-align:right">' + receipt.subtotal.toFixed(2) + '</td></tr><tr><td>Tax (incl.):</td><td style="text-align:right">' + receipt.tax_amount.toFixed(2) + '</td></tr><tr class="tr"><td>TOTAL:</td><td style="text-align:right">KSh ' + receipt.total_amount.toFixed(2) + '</td></tr></table><hr><p style="font-size:12px">Payment: ' + receipt.payment_method.toUpperCase() + '</p><p style="font-size:12px">Served by: ' + (receipt.cashier || 'N/A') + '</p><button class="cb" onclick="window.close()">Close</button></body></html>';
         
         const pw = window.open('', 'Reprint', 'width=400,height=600');
         pw.document.write(html);
@@ -944,3 +981,27 @@ async function generateRecoveryCode() {
         prompt("RECOVERY CODE - COPY THIS NOW!\n\n(Ctrl+C to copy)", result.code);
     } catch (e) { alert("Error: " + e.message); }
 }
+
+document.getElementById('editUserForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const userId = document.getElementById('editUserId').value;
+    const data = {
+        name: document.getElementById('editUserName').value.trim(),
+        email: document.getElementById('editUserEmail').value.trim() || null,
+        phone: document.getElementById('editUserPhone').value.trim() || null
+    };
+    const pwd = document.getElementById('editUserPassword').value;
+    if (pwd) data.password = pwd;
+    
+    const currentUser = authManager.getUser();
+    if (currentUser.role === 'admin') {
+        data.role = document.getElementById('editUserRole').value;
+    }
+    
+    try {
+        await apiCall('/users/' + userId + '/admin-edit', 'PUT', data);
+        closeModal('editUserModal');
+        alert('User updated successfully!');
+        loadUsers();
+    } catch (e) { alert('Error: ' + e.message); }
+});

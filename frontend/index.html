@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Safari POS System</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=9.3">
+    <link rel="stylesheet" href="/static/css/style.css?v=10.0">
 </head>
 <body>
     <div class="dashboard-container">
@@ -288,13 +288,31 @@
         </div>
     </div>
 
-    <script src="/static/js/auth.js?v=9.3"></script>
-    <script src="/static/js/app.js?v=9.3"></script>
-    <script src="/static/js/main.js?v=9.3"></script>
-    <script src="/static/js/analytics.js?v=9.3"></script>
-    <script src="/static/js/tax.js?v=9.3"></script>
+    
+    <div id="editUserModal" class="modal">
+        <div class="modal-content">
+            <h3>Edit User</h3>
+            <form id="editUserForm">
+                <input type="hidden" id="editUserId">
+                <div class="form-group"><label>Name</label><input type="text" id="editUserName" required></div>
+                <div class="form-group"><label>Email</label><input type="email" id="editUserEmail"></div>
+                <div class="form-group"><label>Phone</label><input type="text" id="editUserPhone"></div>
+                <div class="form-group"><label>New Password (blank = keep current)</label><input type="password" id="editUserPassword" placeholder="Leave blank to keep current"></div>
+                <div class="form-group" id="editUserRoleGroup"><label>Role</label><select id="editUserRole"><option value="cashier">Cashier</option><option value="manager">Manager</option><option value="admin">Admin</option></select></div>
+                <div style="display:flex;gap:10px"><button type="submit" class="btn btn-primary" style="flex:1">Save</button><button type="button" class="btn btn-danger" onclick="closeModal('editUserModal')" style="flex:1">Cancel</button></div>
+            </form>
+        </div>
+    </div>
+
+<script src="/static/js/auth.js?v=10.0"></script>
+    <script src="/static/js/app.js?v=10.0"></script>
+    <script src="/static/js/main.js?v=10.0"></script>
+    <script src="/static/js/analytics.js?v=10.0"></script>
+    <script src="/static/js/tax.js?v=10.0"></script>
 </body>
 </html>
+
+
 
 
 
