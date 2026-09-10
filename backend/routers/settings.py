@@ -88,3 +88,49 @@ async def update_business_info(data: dict, current_user=Depends(get_current_user
         set_setting("warn_expiring", data["warn_expiring"])
     
     return {"message": "Settings updated"}
+
+@router.post("/reset-demo")
+async def reset_demo_data(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Reset all demo data - keeps admin user and settings"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can reset demo data")
+    
+    import sqlite3
+    import shutil
+    from datetime import datetime
+    
+    # Create safety backup first
+    backup_name = f"safaripos_before_reset_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+    backup_dir = os.path.join(os.path.dirname(DB_PATH), '..', 'backups')
+    backup_dir = os.path.abspath(backup_dir)
+    os.makedirs(backup_dir, exist_ok=True)
+    backup_path = os.path.join(backup_dir, backup_name)
+    shutil.copy2(DB_PATH, backup_path)
+    
+    # Delete data (keep admin user and settings)
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    tables_to_clear = [
+        "sale_items",
+        "sales",
+        "tax_ledger",
+        "purchase_orders",
+        "products",
+        "categories",
+        "customers"
+    ]
+    
+    for table in tables_to_clear:
+        try:
+            cursor.execute(f"DELETE FROM {table}")
+        except Exception as e:
+            print(f"Warning: {table}: {e}")
+    
+    # Delete all users except admin
+    cursor.execute("DELETE FROM users WHERE role != 'admin'")
+    
+    conn.commit()
+    conn.close()
+    
+    return {"message": "Demo data reset. Admin and settings preserved."}
