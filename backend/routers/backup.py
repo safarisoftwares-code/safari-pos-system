@@ -273,3 +273,88 @@ async def reset_demo_data(current_user=Depends(get_current_user), db: Session = 
         "backup_created": safety_backup,
         "cleared": ["products", "categories", "sales", "tax_ledger", "purchase_orders", "customers", "non-admin users"]
     }
+
+
+@router.post("/restore-data-only/{filename}")
+async def restore_data_only(filename: str, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Restore DATA from backup but keep CURRENT users intact"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can restore backups")
+    
+    if ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    
+    # Find the backup file
+    backup_path = None
+    ext_location = get_backup_location(db)
+    dirs_to_check = [BACKUP_DIR]
+    if ext_location and os.path.exists(ext_location):
+        dirs_to_check.append(ext_location)
+    
+    import string
+    desktop_folder = os.path.join(os.path.expanduser("~"), "Desktop", "Safari-POS Backup")
+    dirs_to_check.append(desktop_folder)
+    for letter in string.ascii_uppercase:
+        drive_folder = os.path.join(letter + ":\\", "Safari-POS Backup")
+        if os.path.exists(drive_folder):
+            dirs_to_check.append(drive_folder)
+    
+    for dir_path in dirs_to_check:
+        if os.path.exists(dir_path):
+            candidate = os.path.join(dir_path, filename)
+            if os.path.exists(candidate):
+                backup_path = candidate
+                break
+    
+    if not backup_path:
+        raise HTTPException(status_code=404, detail="Backup file not found")
+    
+    # Safety backup
+    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "database", "safaripos.db")
+    safety_backup = db_path + ".pre_data_restore"
+    shutil.copy2(db_path, safety_backup)
+    
+    import sqlite3
+    source_conn = sqlite3.connect(backup_path)
+    target_conn = sqlite3.connect(db_path)
+    source_cur = source_conn.cursor()
+    target_cur = target_conn.cursor()
+    
+    tables_to_restore = ["categories", "products", "customers", "sales", "sale_items", "tax_ledger", "purchase_orders"]
+    
+    restored = []
+    for table in tables_to_restore:
+        try:
+            source_cur.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'")
+            if not source_cur.fetchone():
+                continue
+            
+            target_cur.execute(f"PRAGMA table_info({table})")
+            target_cols = [col[1] for col in target_cur.fetchall()]
+            
+            source_cur.execute(f"PRAGMA table_info({table})")
+            source_cols = [col[1] for col in source_cur.fetchall()]
+            
+            common_cols = [c for c in target_cols if c in source_cols]
+            if not common_cols:
+                continue
+            
+            target_cur.execute(f"DELETE FROM {table}")
+            
+            cols_str = ", ".join(common_cols)
+            source_cur.execute(f"SELECT {cols_str} FROM {table}")
+            rows = source_cur.fetchall()
+            
+            if rows:
+                placeholders = ", ".join(["?"] * len(common_cols))
+                target_cur.executemany(f"INSERT INTO {table} ({cols_str}) VALUES ({placeholders})", rows)
+            
+            restored.append(f"{table} ({len(rows)})")
+        except Exception as e:
+            print(f"Warning restoring {table}: {e}")
+    
+    target_conn.commit()
+    source_conn.close()
+    target_conn.close()
+    
+    return {"message": "Data restored! Users and settings preserved.", "restored_tables": restored}

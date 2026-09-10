@@ -832,6 +832,16 @@ async function reprintReceipt(receiptNo) {
 
 
 async function resetDemoData() {
+    // FIRST: Prompt for backup
+    if (confirm("Create a BACKUP before reset? (STRONGLY RECOMMENDED)")) {
+        try {
+            const result = await apiCall("/backup/create?location=desktop", "POST");
+            alert("Backup created: " + result.filename);
+        } catch (e) {
+            if (!confirm("Backup failed: " + e.message + "\n\nContinue with reset anyway?")) return;
+        }
+    }
+
     if (prompt('Type RESET to clear ALL demo data:') !== 'RESET') {
         alert('Reset cancelled.');
         return;
@@ -867,4 +877,24 @@ async function deleteSalesBefore() {
         loadAllSales();
         loadReceiptHistory();
     } catch (e) { alert(e.message); }
+}
+
+
+async function restoreDataOnly() {
+    const fileInput = document.getElementById("restoreFileInput");
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert("Select a backup file first!");
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    const filename = file.name;
+    
+    if (prompt("Type DATA-RESTORE to confirm (Users will be kept):") !== "DATA-RESTORE") return;
+    if (!confirm("WARNING: This will replace ALL products, sales, categories from the backup.\nYour USERS will be preserved.")) return;
+    
+    try {
+        const result = await apiCall("/backup/restore-data-only/" + filename, "POST");
+        alert(result.message + "\n\nRestored: " + (result.restored_tables || []).join(", "));
+    } catch (e) { alert("Error: " + e.message); }
 }

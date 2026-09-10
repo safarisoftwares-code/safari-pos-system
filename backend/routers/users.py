@@ -81,10 +81,61 @@ async def delete_user(user_id: int, current_user=Depends(get_current_user), db: 
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    if user.role == "admin":
-        raise HTTPException(status_code=400, detail="Cannot delete admin account")
     if user.id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    admin_count = db.query(User).filter(User.role == "admin", User.is_active == True).count()
+    if user.role == "admin" and admin_count <= 1:
+        raise HTTPException(status_code=400, detail="Cannot delete the only admin account")
     user.is_active = False
     db.commit()
     return {"message": "User deactivated successfully"}
+
+
+@router.put('/{user_id}/admin-edit')
+async def admin_edit_user(user_id: int, data: dict, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail='Only admin can edit users')
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    if 'name' in data and data['name']:
+        user.name = data['name']
+    if 'email' in data and data['email']:
+        existing = db.query(User).filter(User.email == data['email'], User.id != user_id).first()
+        if existing:
+            raise HTTPException(status_code=400, detail='Email already in use')
+        user.email = data['email']
+    if 'phone' in data and data['phone']:
+        existing_phone = db.query(User).filter(User.phone == data['phone'], User.id != user_id).first()
+        if existing_phone:
+            raise HTTPException(status_code=400, detail='Phone already in use')
+        user.phone = data['phone']
+    if 'password' in data and data['password']:
+        user.password_hash = hash_password(data['password'])
+    if 'role' in data and data['role']:
+        user.role = data['role']
+    db.commit()
+    db.refresh(user)
+    return {'message': 'User updated successfully', 'user_id': user.id}
+
+
+@router.put('/me')
+async def update_my_profile(data: dict, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    if 'name' in data and data['name']:
+        current_user.name = data['name']
+    if 'email' in data and data['email']:
+        existing = db.query(User).filter(User.email == data['email'], User.id != current_user.id).first()
+        if existing:
+            raise HTTPException(status_code=400, detail='Email already in use')
+        current_user.email = data['email']
+    if 'phone' in data and data['phone']:
+        existing = db.query(User).filter(User.phone == data['phone'], User.id != current_user.id).first()
+        if existing:
+            raise HTTPException(status_code=400, detail='Phone already in use')
+        current_user.phone = data['phone']
+    if 'password' in data and data['password']:
+        current_user.password_hash = hash_password(data['password'])
+    db.commit()
+    db.refresh(current_user)
+    return {'message': 'Profile updated'}
+
