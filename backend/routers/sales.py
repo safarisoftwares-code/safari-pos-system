@@ -225,7 +225,7 @@ async def receipt_history(current_user=Depends(get_current_user), db: Session = 
             "discount": sale.discount,
             "payment_method": sale.payment_method,
             "created_at": sale.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "cashier": db.query(User).filter(User.id == sale.cashier_id).first().name,
+            "cashier": sale.cashier_name or "Deleted User",
             "items": [
                 {
                     "name": db.query(Product).filter(Product.id == item.product_id).first().name if db.query(Product).filter(Product.id == item.product_id).first() else "Unknown",
@@ -269,7 +269,7 @@ async def get_last_receipt(current_user=Depends(get_current_user), db: Session =
         "discount": sale.discount,
         "payment_method": sale.payment_method,
         "created_at": sale.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-        "cashier": db.query(User).filter(User.id == sale.cashier_id).first().name,
+        "cashier": sale.cashier_name or "Deleted User",
         "items": [
             {
                 "name": db.query(Product).filter(Product.id == item.product_id).first().name if db.query(Product).filter(Product.id == item.product_id).first() else "Unknown",
