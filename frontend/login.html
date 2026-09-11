@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Safari POS</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=4.0">
+    <link rel="stylesheet" href="/static/css/style.css?v=15.0">
     <style>
-        /* Prevent browser autofill styling */
         input:-webkit-autofill,
         input:-webkit-autofill:hover,
         input:-webkit-autofill:focus {
@@ -24,20 +23,18 @@
                 <p>Safari Softwares - The Force Behind the Future</p>
             </div>
             
-            <!-- autocomplete="off" on form and inputs -->
             <form id="loginForm" autocomplete="off" novalidate>
                 <div class="form-group">
                     <label>Email or Phone Number</label>
                     <input type="text" id="email" name="email" required placeholder="Enter your email" 
-                           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-                           value="">
+                           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
                 </div>
                 <div class="form-group">
                     <label>Password</label>
                     <div style="position: relative;">
                         <input type="password" id="password" name="password" required placeholder="Enter your password" 
                                autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false"
-                               value="" style="padding-right: 60px;">
+                               style="padding-right: 60px;">
                         <button type="button" onclick="togglePassword('password', this)" 
                                 style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 14px;">
                             Show
@@ -52,28 +49,8 @@
         </div>
     </div>
     
-    <script src="/static/js/auth.js?v=4.0"></script>
+    <script src="/static/js/auth.js?v=15.0"></script>
     <script>
-        // Force clear everything on page load
-        (function() {
-            // Clear all storage
-            sessionStorage.clear();
-            localStorage.clear();
-            
-            // Clear all cookies
-            document.cookie.split(";").forEach(function(c) {
-                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-            });
-            
-            // Clear form fields
-            document.getElementById('email').value = '';
-            document.getElementById('password').value = '';
-            
-            // Disable browser autofill
-            document.getElementById('email').setAttribute('autocomplete', 'off');
-            document.getElementById('password').setAttribute('autocomplete', 'new-password');
-        })();
-        
         function togglePassword(inputId, button) {
             const input = document.getElementById(inputId);
             if (input.type === 'password') {
@@ -95,30 +72,15 @@
             
             try {
                 await authManager.login(email, password);
-                
-                // Clear form before redirect
                 emailInput.value = '';
                 passwordInput.value = '';
-                
-                // Clear browser autofill data
-                if (window.passwordManager) {
-                    window.passwordManager.clear();
-                }
-                
                 window.location.href = '/';
             } catch (error) {
                 alert('Login failed: ' + error.message);
-                // Clear password on failure
                 passwordInput.value = '';
                 emailInput.value = '';
                 emailInput.focus();
             }
-        });
-        
-        // Clear fields if user navigates back to this page
-        window.addEventListener('pageshow', function() {
-            document.getElementById('email').value = '';
-            document.getElementById('password').value = '';
         });
     </script>
 
