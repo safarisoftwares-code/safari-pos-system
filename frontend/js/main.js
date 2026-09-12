@@ -333,6 +333,11 @@ async function loadDashboard() {
         const tbody = document.getElementById('todaySalesTableBody');
         if (tbody && data.sales) { tbody.innerHTML = data.sales.map(s => '<tr><td>' + s.receipt_no + '</td><td>' + s.created_at + '</td><td>' + s.cashier + '</td><td>' + s.payment_method.toUpperCase() + '</td><td>KSh ' + s.total_amount.toFixed(2) + '</td></tr>').join('') || '<tr><td colspan="5">No sales</td></tr>'; }
     } catch (e) { console.error(e); }
+    try {
+        if (typeof loadLowStock === 'function') {
+            await loadLowStock();
+        }
+    } catch (err) { console.error('[loadDashboard->loadLowStock]', err); }
 }
 
 async function loadReceiptHistory() {
@@ -487,7 +492,11 @@ async function loadAllSales() {
 async function loadLowStock() {
     try {
         const items = await apiCall('/reports/low-stock');
-        document.getElementById('lowStockList').innerHTML = items.map(p => '<div style="padding:10px;background:#fff3cd;margin-bottom:5px;border-radius:5px"><strong>' + p.name + '</strong> - Stock: ' + p.stock + '</div>').join('') || '<p>No low stock</p>';
+        const html = items.map(p => '<div style="padding:10px;background:#fff3cd;margin-bottom:5px;border-radius:5px"><strong>' + p.name + '</strong> - Stock: ' + p.stock + '</div>').join('') || '<p>No low stock</p>';
+        const l1 = document.getElementById('lowStockList');
+        if (l1) l1.innerHTML = html;
+        const l2 = document.getElementById('lowStockListReports');
+        if (l2) l2.innerHTML = html;
     } catch (e) { console.error(e); }
 }
 

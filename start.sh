@@ -4,7 +4,9 @@ echo "  SAFARI POS SYSTEM"
 echo "  Safari Softwares"
 echo "========================================"
 echo ""
-cd ""
+
+# Move to the script's own directory (project root)
+cd "$(dirname "$0")"
 
 echo "Installing dependencies..."
 pip3 install -r requirements.txt

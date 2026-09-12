@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Safari POS System</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=10.0">
+    <link rel="stylesheet" href="/static/css/style.css?v=11.0">
 </head>
 <body>
     <div class="dashboard-container">
@@ -97,7 +97,7 @@
                 <div class="card"><h3 class="card-title">Daily Close</h3><p>Date: <span id="dailyCloseDate"></span> | Transactions: <span id="dailyCloseTransactions">0</span></p><table style="width:100%"><tbody id="dailyCloseTableBody"></tbody></table></div>
                 <div class="card"><h3 class="card-title">Profit Report</h3><div class="data-table"><table style="width:100%"><thead><tr><th>Product</th><th>Selling</th><th>Tax</th><th>Net</th><th>Cost</th><th>Profit</th><th>Margin</th></tr></thead><tbody id="profitTableBody"></tbody></table></div></div>
                 <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3 class="card-title" style="margin:0">All Sales</h3><button onclick="deleteSalesBefore()" style="background:#d32f2f;color:white;padding:5px 10px;border:none;border-radius:5px;cursor:pointer;font-size:11px">Delete Before Date</button></div><div class="data-table"><table style="width:100%"><thead><tr><th>Receipt</th><th>Date</th><th>Cashier</th><th>Total</th></tr></thead><tbody id="allSalesTableBody"></tbody></table></div></div>
-                <div class="card"><h3 class="card-title">Low Stock</h3><div id="lowStockList"></div></div>
+                <div class="card"><h3 class="card-title">Low Stock</h3><div id="lowStockListReports"></div></div>
             </div>
 
             <div id="analytics" class="view" style="display:none;">
@@ -304,13 +304,15 @@
         </div>
     </div>
 
-<script src="/static/js/auth.js?v=10.0"></script>
-    <script src="/static/js/app.js?v=10.0"></script>
-    <script src="/static/js/main.js?v=10.0"></script>
-    <script src="/static/js/analytics.js?v=10.0"></script>
-    <script src="/static/js/tax.js?v=10.0"></script>
+<script src="/static/js/auth.js?v=11.0"></script>
+    <script src="/static/js/app.js?v=11.0"></script>
+    <script src="/static/js/main.js?v=11.0"></script>
+    <script src="/static/js/analytics.js?v=11.0"></script>
+    <script src="/static/js/tax.js?v=11.0"></script>
 </body>
 </html>
+
+
 
 
 
